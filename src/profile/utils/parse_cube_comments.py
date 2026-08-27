@@ -1,4 +1,6 @@
 import ast
+from src.image.photograph import ExifMetaData
+
 
 def parse_cube_comments(comments: list[str]):
     """ Obtain calibration gray values, colour space, bit depth, exit metadata, statistics and sample data from .cube comments. """
@@ -22,7 +24,12 @@ def parse_cube_comments(comments: list[str]):
     for entry in ast.literal_eval(comments[4]):
         parts = entry.split(';')
         grid_point = ast.literal_eval(parts[0])
-        sample_data[grid_point] = {
+        lx, ly = grid_point
+        if lx not in sample_data.keys():
+            sample_data[lx] = {}
+        if ly not in sample_data[lx].keys():
+            sample_data[lx][ly] = {}
+        sample_data[lx][ly] = {
             parts[i]: float(parts[i + 1]) for i in range(1, len(parts), 2)
         }
 
