@@ -23,11 +23,11 @@ def format_cube_comments(gray, colour_space, bit_depth, exif_metadata, statistic
     # Include color sample information (indexing is 1-based for the sample data)
     sample_texts = []
     sample_data_types = ['ciede2000', 'dL', 'da', 'db']
-    for l_y in sample_data.keys():
-        for l_x in sample_data[l_y].keys():
+    for l_y in sample_data[1].keys():
+        for l_x in sample_data.keys():
             sample_text = f'({l_x}, {l_y})'
             for i in range(4):
-                sample_text += ';' + sample_data_types[i] + ';' + str(sample_data[l_y][l_x][sample_data_types[i]])
+                sample_text += ';' + sample_data_types[i] + ';' + str(sample_data[l_x][l_y][sample_data_types[i]])
             sample_texts.append(sample_text)
     comments.append(str(tuple(sample_texts)))
 
