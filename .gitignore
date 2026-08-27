@@ -111,3 +111,4 @@ venv.bak/
 # Imaging System external dependencies
 ICC*Profiles/
 exiftool.exe
+/testdata/
