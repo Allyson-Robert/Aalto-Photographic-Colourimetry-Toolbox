@@ -1,38 +1,73 @@
 import os
+import ast
 import colour
-from ast import literal_eval as make_tuple
-
-from image.photograph import Photograph
-from image.reference import ReferenceChart
-
+from src.image.photograph import ExifMetaData
+from src.profile.utils.parse_cube_comments import parse_cube_comments
 
 class LUTProfile:
-    def __init__(self, lut, gray, metadata):
+    """ Container for LUT profile data.
+
+     Class reads and writes a 3D LUT profile from a .cube file and extracts relevant information such as the LUT content, calibration gray values, color space, bit depth, EXIF metadata, statistics, and sample data.
+
+     Attributes:
+        lut_data (colour.LUT3D): The 3D LUT data read from the .cube file.
+        gray (tuple): The reference gray values in Lab color space.
+        colour_space (str): The color space of the LUT profile.
+        bit_depth (int): The bit depth of the LUT profile.
+        exif_metadata (ExifMetaData): The EXIF metadata associated with the LUT profile.
+        statistics (dict): Statistics related to the calibration, such as average and maximum CIEDE2000 values.
+        sample_data (dict): Color coordinates of the sample data used for calibration.
+     """
+
+    def __init__(self, lut, gray, colour_space, bit_depth, exif_metadata, statistics, sample_data):
         """Initialize LUTProfile from data."""
-        self.lut_data = lut
         self.gray = gray
-        self.metadata = metadata
+        self.colour_space = colour_space
+        self.bit_depth = bit_depth
+        self.exif_metadata = exif_metadata
+        self.statistics = statistics
+        self.sample_data = sample_data
+        self.lut_data = lut
 
     @classmethod
     def from_file_location(cls, profile_location) -> "LUTProfile":
-        """Read calibration profile based on the name"""
+        """Read calibration profile from a file on disk and extract data such as LUT content
+        and calibration conditions."""
         # Read 3D LUT
         lut = colour.read_LUT(profile_location)
+        comments = lut.comments
 
+        """ Obtain calibration gray values, colour space, bit depth, exit metadata, statistics and sample data from .cube comments. """
         # Read profile reference gray LAB
-        gray = make_tuple(lut.comments[1].split(';')[1])
+        gray = ast.literal_eval(comments[1].split(';')[1])
 
-        # Read profile metadata
-        metadata = {}
-        for md in make_tuple(lut.comments[2]):
-            metadata[md.split(';')[0]] = md.split(';')[1]
+        # Third line contains colour space, bit depth and EXIF metadata
+        colour_space, bit_depth = ast.literal_eval(comments[2])[:2]
+        metadata_dict = {}
+        for md in ast.literal_eval(comments[2]):
+            metadata_dict[md.split(';')[0]] = md.split(';')[1]
+        exif_metadata = ExifMetaData.from_data(colour_space, bit_depth, metadata_dict)
 
-        return cls(lut, gray, metadata)
+        # Fourth line contains some sample statistics of the calibration
+        statistics = {}
+        for field in ast.literal_eval(comments[3]):
+            statistics[field.split(';')[0]] = float(field.split(';')[1])
 
-    @classmethod
-    def from_data(cls, lut, gray, metadata) -> "LUTProfile":
-        """Initialize LUTProfile from data."""
-        return cls(lut, gray, metadata)
+        # Fifth line contains the colour coordinates of the sample data
+        sample_data = {}
+        for entry in ast.literal_eval(comments[4]):
+            parts = entry.split(';')
+            grid_point = ast.literal_eval(parts[0])
+            lx, ly = grid_point
+            if lx not in sample_data.keys():
+                sample_data[lx] = {}
+            if ly not in sample_data[lx].keys():
+                sample_data[lx][ly] = {}
+            sample_data[lx][ly] = {
+                parts[i]: float(parts[i + 1]) for i in range(1, len(parts), 2)
+            }
+
+        return cls(lut, gray, colour_space, bit_depth, exif_metadata, statistics, sample_data)
 
     def get_lut(self):
         return self.lut_data
@@ -40,47 +75,45 @@ class LUTProfile:
     def get_gray(self):
         return self.gray
 
-    def get_metadata(self):
-        return self.metadata
-
-    def write_profile(self, write_location: str , reference_chart: ReferenceChart, sample_data: Photograph, calibration_gray):
+    def write_profile(self, save_location):
         """Write correction profile 3D LUT"""
-        if not os.path.exists(write_location):
-            os.makedirs(write_location)
 
-        # Gather image format data in comments
-        comments = ['(x, y, z): (L*, a*, b*)', f'gray;{str(calibration_gray)}',
-                    [f'ColorSpace;{in_metadata[0][0]}', f'BitDepth;{in_metadata[0][1]}'], [], []]
+        # Verify filename extension, add .cube or replace if needed
+        if not save_location.lower().endswith('.cube'):
+            save_location = os.path.splitext(save_location)[0] + '.cube'
 
-        # Gather image metadata in comments
-        for key in in_metadata[1].keys():
-            comments[2].append(key + ';' + str(in_metadata[1][key]))
+        # Include image format data
+        comments = ['(x, y, z): (L*, a*, b*)', f'gray;{str(self.gray)}',
+                    [f'ColorSpace;{self.exif_metadata.color_space}', f'BitDepth;{self.exif_metadata.bit_depth}'], [], []]
+
+        # Include image metadata
+        for key in self.exif_metadata.get_exif_data().keys():
+            comments[2].append(key + ';' + str(self.exif_metadata.get_exif_data()[key]))
         comments[2] = str(tuple(comments[2]))
 
-        # Add calibration accuracy information in comments
+        # Include calibration accuracy information
         ref_data_types = ('avg_ciede2000', 'min_ciede2000', 'max_ciede', 'avg_dL', 'avg_da', 'avg_db')
         for i in range(6):
-            comments[3].append(ref_data_types[i] + ';' + str(in_ref_data[i]))
+            comments[3].append(ref_data_types[i] + ';' + str(self.statistics[ref_data_types[i]]))
         comments[3] = str(tuple(comments[3]))
 
-        # Add color sample information in comments
+        # Include color sample information
         sample_data_types = ['ciede2000', 'dL', 'da', 'db']
-        for l_y in range(ref_grid[1]):
-            for l_x in range(ref_grid[0]):
+        for l_y in range(len(self.sample_data)):
+            for l_x in range(len(self.sample_data[0])):
                 sample_text = f'({l_x + 1}, {l_y + 1})'
                 for i in range(4):
-                    sample_text += ';' + sample_data_types[i] + ';' + str(in_sample_data[i, l_x, l_y])
+                    sample_text += ';' + sample_data_types[i] + ';' + str(self.sample_data[i, l_x, l_y])
                 comments[4].append(sample_text)
         comments[4] = str(tuple(comments[4]))
 
         # Create final 3D LUT
-        out_lut = colour.LUT3D(in_lut.table, in_name, in_lut.domain, in_lut.size,
+        out_lut = colour.LUT3D(self.lut_data.table, save_location, self.lut_data.domain, self.lut_data.size,
                                comments)
         print(out_lut)
 
         # Write 3D LUT as .cube file
-        colour.write_LUT(out_lut, os.path.join(profile_path, in_name) + '.cube')
+        colour.write_LUT(out_lut, save_location)
 
-        print(f"Profile '{in_name}' saved.")
-
+        print(f"Profile '{save_location}' saved.")
 
