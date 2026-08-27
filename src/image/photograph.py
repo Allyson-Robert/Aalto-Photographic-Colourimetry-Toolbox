@@ -57,24 +57,36 @@ class ExifMetaData:
         'EXIF:FocalLength'
     ]
 
-    def __init__(self, metadata: str):
+    def __init__(self, color_space: str, bit_depth: int, exif_data: dict):
+        """Initialize metadata from provided values."""
+        self.color_space = color_space
+        self.bit_depth = bit_depth
+        self.exif_data = exif_data
+
+    @classmethod
+    def from_image_location(cls, image_location: str) -> "ExifMetaData":
         """Initialize metadata from an image file path.
 
         Args:
-            metadata: Path to the image file to read metadata from.
+            image_location: Path to the image file to read metadata from.
         """
-        if isinstance(metadata, str):
-            exif_data = read_metadata_from_image(metadata)
+        if isinstance(image_location, str):
+            exif_data = read_metadata_from_image(image_location)
         else:
             raise ValueError("Metadata must be a file path")
 
         # Colour space found in Profile Description as str 'PROFILE STANDARD'
         colourspace = exif_data.get('ICC_Profile:ProfileDescription').split(' ')[0]
-        self.color_space = next(filter(lambda x: x.upper() == colourspace.upper(), defaults.color_spaces))
+        color_space = next(filter(lambda x: x.upper() == colourspace.upper(), defaults.color_spaces))
 
         # Bit depth can come from either EXIF or File metadata, so we check both
-        self.bit_depth = exif_data.get('EXIF:BitsPerSample') or exif_data.get('File:BitsPerSample')
-        self.exif_data = exif_data
+        bit_depth = exif_data.get('EXIF:BitsPerSample') or exif_data.get('File:BitsPerSample')
+
+        return cls(color_space, bit_depth, exif_data)
+
+    @classmethod
+    def from_data(cls, color_space: str, bit_depth: int, exif_data: dict) -> "ExifMetaData":
+        return cls(color_space, bit_depth, exif_data)
 
     # TODO: implement
     def set_color_space(self, color_space: str):
