@@ -40,9 +40,9 @@ exif_data = ('EXIF:XResolution', 'EXIF:YResolution', 'EXIF:ResolutionUnit', 'EXI
              'EXIF:ExposureMode', 'EXIF:Saturation', 'EXIF:Sharpness', 'EXIF:WhiteBalance', 'EXIF:DigitalZoomRatio',
              'EXIF:ExifVersion', 'EXIF:DateTimeOriginal')
 
-main_directory = r'C:\Users\inari\OneDrive - Aalto University\Toinen vuosi\Bachelors thesis\Python'                   # Main directory for images
-directories = (r'Calibration\Image Uniformity', r'Calibration\Correction Profiles', r'Calibration\Spectra',
-               r'Calibration\Calibration Images', 'Corrected Images', 'Exported Images', 'Remote Capture')
+main_directory = r'/u/56/roberta2/unix/Pictures/Imaging System'                   # Main directory for images
+directories = (r'Calibration/Image Uniformity', r'Calibration/Correction Profiles', r'Calibration/Spectra',
+               r'Calibration/Calibration Images', 'Corrected Images', 'Exported Images', 'Remote Capture')
 
 system_memory = 16000000                        # Bytes of system memory to utilize
 cpu_threads = multiprocessing.cpu_count() - 1   # Number of threads to utilize, 0 for no parallel processing
