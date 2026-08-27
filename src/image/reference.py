@@ -1,10 +1,19 @@
-from src.image.image_base import ImageBase, ImageMetaData
+from src.image.image_base import ImageBase
 from ast import literal_eval as make_tuple
 import xml.etree.ElementTree as ET
 import numpy as np
 
 
 class ReferenceChart(ImageBase):
+    """ Container for reference chart pixel data and associated metadata.
+
+        Reference chart pixels are stored in XML files, which contain the color target format, illuminant, grid information and sample Lab values.
+        This class reads data from the XML file and constructs a ReferenceChart object with the pixel data and metadata.
+
+        Attributes:
+            image (np.ndarray): The pixel data of the reference chart.
+            metadata (ReferenceChartMetaData): The metadata associated with the reference chart, including illuminant and grid information.
+    """
     @classmethod
     def from_image_location(cls, image_location: str) -> "ImageBase":
         # Try reading the XML file for the reference chart
@@ -19,7 +28,7 @@ class ReferenceChart(ImageBase):
                   make_tuple(grid.find(f"offset[@type='sample']").text))
         grid_indices = make_tuple(grid.text.strip())
 
-        # Read color target sample Lab values for each square
+        # Read color target sample Lab values for each square, order is column-major (x, y) with (1, 1) being the top-left square
         image = np.zeros((grid_indices[0], grid_indices[1], 3))
         for l_y in range(grid_indices[1]):
             for l_x in range(grid_indices[0]):
@@ -37,8 +46,14 @@ class ReferenceChart(ImageBase):
 
         return cls(image, metadata)
 
-class ReferenceChartMetaData(ImageMetaData):
-    """Metadata for a reference chart, including illuminant and grid information."""
+class ReferenceChartMetaData:
+    """ Metadata for a reference chart, including illuminant and grid information.
+
+        Attributes:
+            illuminant (str): The illuminant of the reference chart.
+            offset (tuple): The offset values for the reference chart grid.
+            grid_indices (tuple): The grid indices of the reference chart.
+    """
 
     def __init__(self, illuminant: str, offset: tuple, grid_indices: tuple):
         self.illuminant = illuminant
