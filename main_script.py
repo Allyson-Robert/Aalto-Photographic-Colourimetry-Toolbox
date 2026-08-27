@@ -343,7 +343,7 @@ def main():
                 if focus_height is not None:
                     focus_height = focus_height.strip()
 
-                for file_name in utilities.get_files(r'Calibration\Calibration Images',
+                for file_name in utilities.get_files(r'Calibration/Calibration Images',
                                                      match_extension=settings.input_extension):
                     print(file_name)
                     if file_name.split('_')[0] == 'calib-' + ref_name and file_name.split('_')[1] == focus_height:
