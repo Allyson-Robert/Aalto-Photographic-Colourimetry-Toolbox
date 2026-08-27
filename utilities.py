@@ -25,7 +25,10 @@ def create_directories(main_dir):
 
 # List files in given directory
 def get_files(sub_path, match_extension=None):
-    file_names = natsort.natsorted(os.listdir(os.path.join(settings.main_directory, sub_path)))  # Get files in order
+    search_path = os.path.join(settings.main_directory, sub_path)
+    file_names = natsort.natsorted(os.listdir(search_path))  # Get files in order
+
+    print(search_path, file_names)
 
     if match_extension is None:
         # Ignore folders
