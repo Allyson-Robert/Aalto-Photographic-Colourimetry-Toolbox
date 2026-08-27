@@ -2,6 +2,7 @@
 
 import cv2 as cv
 import src.defaults as defaults
+from image_ops.utils.read_metadata_from_image import read_metadata_from_image
 from src.image.image_base import ImageBase
 
 class Photograph(ImageBase):
