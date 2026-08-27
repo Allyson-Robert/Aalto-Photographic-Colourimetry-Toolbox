@@ -28,8 +28,14 @@ class TestLUTProfile(TestCase):
     def test_write_profile(self):
         # Test the write_profile method (this is a placeholder test, actual implementation may vary)
         profile_location = TESTFILE_LOCATION
+        test_location = "testdata/test_output.cube"
         lut_profile = LUTProfile.from_file_location(profile_location)
         try:
-            lut_profile.write_profile("test_output")
+            lut_profile.write_profile(test_location)
         except NotImplementedError:
             pass  # If not implemented, we just pass for now
+
+        written_profile = LUTProfile.from_file_location(test_location)
+        self.assertIsNotNone(written_profile.get_lut())
+        self.assertIsNotNone(written_profile.get_gray())
+        assert written_profile.get_gray() == lut_profile.get_gray(), "Gray values do not match after writing and reading the profile."
