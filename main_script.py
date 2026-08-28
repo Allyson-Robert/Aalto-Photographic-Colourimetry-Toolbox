@@ -400,7 +400,9 @@ def main():
                 # cv.waitKey(0)
                 lu_corner_crop = (-min(0, offset[0]), -min(0, offset[1]))
                 offset = np.sum([offset, lu_corner_crop], axis=0)
-                img_overlay = (img_overlay[0][lu_corner_crop[1]:][lu_corner_crop[0]:], img_overlay[1])
+                # Apparently this is a bug, use comma slicing, consecutive slicing will double slice the same axis
+                # img_overlay = (img_overlay[0][lu_corner_crop[1]:][lu_corner_crop[0]:], img_overlay[1])
+                img_overlay = (img_overlay[0][lu_corner_crop[1]:, lu_corner_crop[0]:], img_overlay[1])
                 rd_corner_crop = (max(0, (offset[0] + img_overlay[0].shape[1]) - target_c[0].shape[1]),
                                   max(0, (offset[1] + img_overlay[0].shape[0]) - target_c[0].shape[0]))
                 # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
