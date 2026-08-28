@@ -24,7 +24,7 @@ ciede_max = 2.55                # CIEDE2000 value interpolated to max brightness
 # Range of input LAB, max. range: (0, -100, -100), (100, 100, 100), natural colors usually (0, -40, -50), (100, 50, 60)
 input_lab_domain = ((0, -100, -100), (100, 100, 100))
 correction_epsilon = 1.0                            # Epsilon: smooth -> sharp curves
-lut_size = 128                                      # Create 3D LUT of dimensions (lut_size x lut_size x lut_size x 3)
+lut_size = 16                                      # Create 3D LUT of dimensions (lut_size x lut_size x lut_size x 3)
 
 prompt_margin_utilization = True                   # Ask user if safety margins should be used? If not, will be used.
 ref_margins = (0.15, 0.1)                           # Safety margins for reference gray images (x, y)

@@ -11,7 +11,6 @@ import natsort
 from itertools import repeat
 import numpy as np
 from matplotlib import pyplot as plt
-import subprocess
 plt.rcParams["figure.dpi"] = 200
 
 

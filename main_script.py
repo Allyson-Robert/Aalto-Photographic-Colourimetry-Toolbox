@@ -366,7 +366,7 @@ def main():
 
             # Get reference gray image
             gray_img = image_utilities.read_image('calib-gray_' + focus_height + '.' + settings.input_extension,
-                                                  r'Calibration\Calibration Images')
+                                                  r'Calibration/Calibration Images')
 
             if gray_img is None:
                 print()
@@ -384,31 +384,31 @@ def main():
                                                            abs(ref_crop[1][1][0] - ref_crop[1][0][0]),
                                                            abs(ref_crop[1][1][1] - ref_crop[1][0][1])))[0]
 
-            calib_image_data = image_utilities.read_image(calib_files[0], r'Calibration\Calibration Images')[1]
+            calib_image_data = image_utilities.read_image(calib_files[0], r'Calibration/Calibration Images')[1]
             target_template = image_utilities.read_image(ref_name + '.jpg', 'Reference Values', absolute_path=True)
             target_c = (np.zeros((target_template[0].shape[0], target_template[0].shape[1], 3)), calib_image_data)
 
             img = None
             for calib_file in calib_files:
-                img = image_utilities.read_image(calib_file, r'Calibration\Calibration Images')
+                img = image_utilities.read_image(calib_file, r'Calibration/Calibration Images')
                 if use_margins:
                     img = image_utilities.get_safe_area(img)  # Crop to safety margins
 
                 # Crop color target
                 img_overlay, offset = image_manipulation.crop_target(img, target_template)
-                cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
-                cv.waitKey(0)
+                # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
+                # cv.waitKey(0)
                 lu_corner_crop = (-min(0, offset[0]), -min(0, offset[1]))
                 offset = np.sum([offset, lu_corner_crop], axis=0)
                 img_overlay = (img_overlay[0][lu_corner_crop[1]:][lu_corner_crop[0]:], img_overlay[1])
                 rd_corner_crop = (max(0, (offset[0] + img_overlay[0].shape[1]) - target_c[0].shape[1]),
                                   max(0, (offset[1] + img_overlay[0].shape[0]) - target_c[0].shape[0]))
-                cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
-                cv.waitKey(0)
+                # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
+                # cv.waitKey(0)
                 img_overlay = (img_overlay[0][:-(rd_corner_crop[1] + 1), :-(rd_corner_crop[0] + 1)], img_overlay[1])
 
-                cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
-                cv.waitKey(0)
+                # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
+                # cv.waitKey(0)
                 layers = np.stack((target_c[0][offset[1]:offset[1] + img_overlay[0].shape[0],
                                    offset[0]:offset[0] + img_overlay[0].shape[1]], img_overlay[0]), axis=-1)
 
@@ -418,8 +418,9 @@ def main():
                                                                                            ).filled(0)
 
                 # Show intermediate state of target_c
-                image_utilities.show_image("Intermediate target_c", target_c, save_to_disk=True)
+                # image_utilities.show_image("Intermediate target_c", target_c, save_to_disk=True)
 
+            print("Creating correction LUT ...")
             correction_lut = calibration.color_calibration(target_c, ref_data)[0]  #  3D LUT
             print('lut created') #testi
             target_a = image_manipulation.adjust_color(target_c, correction_lut)  # Correct color target
