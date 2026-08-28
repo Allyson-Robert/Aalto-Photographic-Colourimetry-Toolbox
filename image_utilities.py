@@ -206,6 +206,21 @@ def write_image(in_img, img_name, sub_folder, extension='.' + settings.output_ex
     if os.path.exists(os.path.join(img_path, img_name + extension + "_original")):
         os.remove(os.path.join(img_path, img_name + extension + "_original"))
 
+def new_read_image(img_name, sub_folder='Exported Images', col_depth=-1, convert=True, absolute_path=False):
+    """Read image file
+
+    Image format: (ndarray, ((color space index, bit depth index), metadata)))"""
+    from src.image.photograph import Photograph
+    from src.image_ops.convert_image_colour import convert_image_colour
+
+    img_path = os.path.join(settings.main_directory, sub_folder, img_name)  # Combine file path
+    img_object = Photograph.from_image_location(img_path)
+
+    if convert:
+        img_object = convert_image_colour(img_object, input_space = 'BGR', output_space = 'LAB')
+    metadata = [[img_object.get_color_space(), img_object.get_bit_depth()], img_object.metadata.exif_data]
+
+    return img_object.image, metadata
 
 def read_image(img_name, sub_folder='Exported Images', col_depth=-1, convert=True, absolute_path=False):
     """Read image file
