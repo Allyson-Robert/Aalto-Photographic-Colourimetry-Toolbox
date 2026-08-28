@@ -3,11 +3,11 @@
 import numpy as np
 import colour
 import src.defaults as defaults
-from src.image.photograph import Photograph as Image
+from src.image.photograph import Photograph
 from src.utils.calc.depth_to_max import depth_to_max
 
 
-def convert_image_colour(img: Image, input_space: str, output_space: str) -> Image:
+def convert_image_colour(img: Photograph, input_space: str, output_space: str) -> Photograph:
     """Convert image data from one supported color space to another.
 
     Args:
@@ -16,7 +16,7 @@ def convert_image_colour(img: Image, input_space: str, output_space: str) -> Ima
         output_space: The target representation, such as ``'RGB'`` or ``'LAB'``.
 
     Returns:
-        A new Image instance containing the converted pixel data and copied metadata.
+        A new Photograph instance containing the converted pixel data and copied metadata.
 
     Raises:
         ValueError: If the requested input or output space is unsupported.
@@ -105,4 +105,4 @@ def convert_image_colour(img: Image, input_space: str, output_space: str) -> Ima
 
     # TODO: Revisit how metadata is copied for converted images to ensure it stays consistent with the new image data.
     # Copy the metadata from the original image.
-    return Image(converted_image_data, img.get_metadata())
+    return Photograph(converted_image_data, img.get_metadata())
