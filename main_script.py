@@ -367,6 +367,8 @@ def main():
             # Get reference gray image
             gray_img = image_utilities.read_image('calib-gray_' + focus_height + '.' + settings.input_extension,
                                                   r'Calibration/Calibration Images')
+            new_gray_img = image_utilities.new_read_image('calib-gray_' + focus_height + '.' + settings.input_extension,
+                                                  r'Calibration/Calibration Images')
 
             if gray_img is None:
                 print()
