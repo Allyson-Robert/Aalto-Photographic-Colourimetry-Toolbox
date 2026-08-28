@@ -223,7 +223,6 @@ def crop_samples(sample_name, adjust=False, ref_gray=False, crop_settings=None):
     if not ref_gray:  # If cropping reference gray, no need to read reference data
         ref_crop_data = image_utilities.read_crop(file_names[0])
         if ref_crop_data is not None:
-            print('1')
             start_file = ref_crop_data[1][0] + '.' + settings.output_extension
             # Check if cropped image exists, otherwise ignore existing data
             crop_exists = os.path.exists(os.path.join(rf'{os.path.join(settings.main_directory, path)}\Cropped',
@@ -232,20 +231,15 @@ def crop_samples(sample_name, adjust=False, ref_gray=False, crop_settings=None):
         else:
             start_file = file_names[0]  # Use first file alphabetically
             crop_exists = False
-            print('2')
 
         if not crop_exists or adjust:
             img = None
-            print('3')
             while img is None:  # Wait for successful read
                 img = image_utilities.read_image(start_file, path, convert=False)
-                print('4')
             if adjust and ref_crop_data is not None and crop_exists:
-                print('5')
                 # Start with previous crop data
                 ref_crop = match_crop(img, 0, (ref_crop_data[2], ref_crop_data[3]), convert=False)
             else:
-                print('6')
                 ref_crop = match_crop(img, 0, convert=False)
             if ref_crop is None:
                 utilities.print_color("Discarding crop data.", 'warning')

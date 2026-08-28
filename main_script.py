@@ -396,8 +396,6 @@ def main():
 
                 # Crop color target
                 img_overlay, offset = image_manipulation.crop_target(img, target_template)
-                # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
-                # cv.waitKey(0)
                 lu_corner_crop = (-min(0, offset[0]), -min(0, offset[1]))
                 offset = np.sum([offset, lu_corner_crop], axis=0)
                 # Apparently this is a bug, use comma slicing, consecutive slicing will double slice the same axis
@@ -405,12 +403,8 @@ def main():
                 img_overlay = (img_overlay[0][lu_corner_crop[1]:, lu_corner_crop[0]:], img_overlay[1])
                 rd_corner_crop = (max(0, (offset[0] + img_overlay[0].shape[1]) - target_c[0].shape[1]),
                                   max(0, (offset[1] + img_overlay[0].shape[0]) - target_c[0].shape[0]))
-                # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
-                # cv.waitKey(0)
                 img_overlay = (img_overlay[0][:-(rd_corner_crop[1] + 1), :-(rd_corner_crop[0] + 1)], img_overlay[1])
 
-                # cv.imshow('Overlay image', image_manipulation.convert_color(img_overlay,'show')[0])  # Show overlay image
-                # cv.waitKey(0)
                 layers = np.stack((target_c[0][offset[1]:offset[1] + img_overlay[0].shape[0],
                                    offset[0]:offset[0] + img_overlay[0].shape[1]], img_overlay[0]), axis=-1)
 
@@ -420,7 +414,7 @@ def main():
                                                                                            ).filled(0)
 
                 # Show intermediate state of target_c
-                # image_utilities.show_image("Intermediate target_c", target_c, save_to_disk=True)
+                image_utilities.show_image("Intermediate target_c", target_c, save_to_disk=True)
 
             print("Creating correction LUT ...")
             correction_lut = calibration.color_calibration(target_c, ref_data)[0]  #  3D LUT

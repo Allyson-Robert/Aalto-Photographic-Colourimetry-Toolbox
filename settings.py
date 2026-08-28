@@ -1,5 +1,6 @@
 import multiprocessing
 
+from defaults import cpu_threads
 
 max_window = [1400, 680]        # width, height (px), window size limits
 selection_zoom = 8              # Zoom ratio for selecting sample reference points
@@ -44,8 +45,9 @@ main_directory = r'/u/56/roberta2/unix/Pictures/Imaging System'                 
 directories = (r'Calibration/Image Uniformity', r'Calibration/Correction Profiles', r'Calibration/Spectra',
                r'Calibration/Calibration Images', 'Corrected Images', 'Exported Images', 'Remote Capture')
 
-system_memory = 16000000                        # Bytes of system memory to utilize
-cpu_threads = multiprocessing.cpu_count() - 1   # Number of threads to utilize, 0 for no parallel processing
+system_memory = 8000000                        # Bytes of system memory to utilize
+# cpu_threads = multiprocessing.cpu_count() - 1   # Number of threads to utilize, 0 for no parallel processing
+cpu_threads = 0
 
 # Window prompts
 prompts = {'horizontal': "Drag horizontal line, then press ENTER.",
