@@ -2,7 +2,8 @@
 
 import cv2 as cv
 import src.defaults as defaults
-from image_ops.utils.read_metadata_from_image import read_metadata_from_image
+from src.image_ops.utils.read_metadata_from_image import read_metadata_from_image
+from src.image_ops.utils.parse_bitdepth_from_exif_metadata import parse_bitdepth_from_exif_metadata
 from src.image.image_base import ImageBase
 
 class Photograph(ImageBase):
@@ -14,14 +15,14 @@ class Photograph(ImageBase):
         image = cv.imread(image_location, cv.IMREAD_UNCHANGED)
         if image is None:
             raise ValueError(f"Image not found at {image_location}")
-        metadata = ExifMetaData(image_location)
+        metadata = ExifMetaData.from_image_location(image_location)
         return cls(image, metadata)
 
     def write(self, output_location: str) -> None:
         """Write the stored image to disk using OpenCV."""
         cv.imwrite(output_location, self.image)
 
-    def get_color_space(self):
+    def get_color_space(self) -> str:
         """Return the image color space from the attached metadata."""
         return self.metadata.get_color_space()
 
@@ -29,17 +30,9 @@ class Photograph(ImageBase):
         """Return the colour-science model matching the image color space."""
         return defaults.colour_models[self.get_color_space()]
 
-    def get_bit_depth(self):
+    def get_bit_depth(self) -> int:
         """Return the bit depth stored in the image metadata."""
-        bit_depth = self.metadata.get_bit_depth()
-        if isinstance(bit_depth, (list, tuple, set)):
-            return max(bit_depth)
-        if isinstance(bit_depth, str):
-            try:
-                return int(bit_depth)
-            except ValueError:
-                return bit_depth
-        return bit_depth
+        return self.metadata.get_bit_depth()
 
 class ExifMetaData:
     """Metadata container for image color and EXIF values."""
@@ -70,8 +63,12 @@ class ExifMetaData:
         Args:
             image_location: Path to the image file to read metadata from.
         """
+        exif_data = {}
         if isinstance(image_location, str):
-            exif_data = read_metadata_from_image(image_location)
+            exif = read_metadata_from_image(image_location)
+            for key in cls.METADATA_SUBSET:
+                if key in exif:
+                    exif_data[key] = exif[key]
         else:
             raise ValueError("Metadata must be a file path")
 
@@ -81,6 +78,7 @@ class ExifMetaData:
 
         # Bit depth can come from either EXIF or File metadata, so we check both
         bit_depth = exif_data.get('EXIF:BitsPerSample') or exif_data.get('File:BitsPerSample')
+        bit_depth = parse_bitdepth_from_exif_metadata(bit_depth)
 
         return cls(color_space, bit_depth, exif_data)
 
