@@ -1,2 +1,2 @@
 class Crop:
-
+    pass
