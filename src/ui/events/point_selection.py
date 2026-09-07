@@ -6,17 +6,7 @@ an OpenCV mouse callback. Every class here exists purely to give the user
 visual feedback while selecting points in a window -- none of it makes
 sense with no window open, so it lives in ``ui``, not ``image``.
 
-WHY?/TODO-ADR: the "closer point" replacement logic in
-`PointSelectionState.offer_point`/`resolve_release`, and the LINE-mode
-point-reversal step in `PointSelectionCallback._on_button_up`, are ported
-directly from the legacy `image_event` implementation (module-level
-globals, `(-1, -1)` sentinel tuples, `np.sum(...) == -2` unset-checks).
-They have not yet been covered by characterization tests against the
-original behavior. Do not trust this extraction over the legacy original
-until such tests exist. See docs/adr/ for tracking.
 """
-
-from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
@@ -205,7 +195,7 @@ class PointSelectionCallback:
         show_image: Callable that pushes a rendered frame to the window.
         zoom_factor: Zoom multiplier used to convert on-screen clicks back
             to image coordinates while a zoomed preview is active. Defaults
-            to `src.defaults.SELECTION_ZOOM`; override for tests.
+            to `src.defaults.selection_zoom`; override for tests.
     """
 
     state: PointSelectionState
@@ -214,7 +204,7 @@ class PointSelectionCallback:
     draw_marker: DrawMarker
     zoom_image: ZoomImage
     show_image: ShowImage
-    zoom_factor: float = SELECTION_ZOOM
+    zoom_factor: float = selection_zoom
 
     def __call__(self, event: int, x: int, y: int, flags: int,
                  context: PointSelectionCallbackContext) -> None:
