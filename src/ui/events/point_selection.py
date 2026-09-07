@@ -29,7 +29,8 @@ class PointSelectionMode(Enum):
     HORIZONTAL = auto() # Selecting two points to define a horizontal reference line.
     LINE = auto() # Selecting two points to define an arrow annotation.
     CROP = auto() # Selecting two points to define a crop rectangle.
-    ZOOM = auto() # No point selection in progress; clicking pans/zooms the view.
+    REF = auto()
+    REF_TIMELINE = auto()
 
     @property
     def is_two_point_mode(self) -> bool:
