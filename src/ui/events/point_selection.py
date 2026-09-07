@@ -33,22 +33,45 @@ class PointSelectionMode(Enum):
     REF_TIMELINE = auto()
 
     @property
-    def is_two_point_mode(self) -> bool:
-        """Whether this mode collects two selection points."""
-        return self in (
-            PointSelectionMode.HORIZONTAL,
-            PointSelectionMode.LINE,
-            PointSelectionMode.CROP,
-        )
+    def window_title(self) -> str:
+        """The title of the OpenCV window for this mode."""
+        return {
+            PointSelectionMode.HORIZONTAL: "Drag horizontal line, then press ENTER.",
+            PointSelectionMode.LINE: "Drag line to measure, then press ENTER. "
+                   "You can adjust the width of the measured line using the mouse wheel.",
+            PointSelectionMode.CROP: "Select crop, then press ENTER.",
+            PointSelectionMode.REF: "Select reference points, then press ENTER.",
+            PointSelectionMode.REF_TIMELINE: "Select reference points, then press ENTER. "
+                            "To use the same ref. points for rest of images, press A prior to ENTER.",
+        }[self]
 
+    # These modes require additional markers to be drawn
     @property
     def draws_point_markers(self) -> bool:
-        """Whether individual selected points get a cross marker.
+        """ Does the mode call for markers to be drawn """
+        return self in (PointSelectionMode.HORIZONTAL, PointSelectionMode.CROP)
 
-        LINE mode is the one exception: the arrow itself communicates both
-        endpoints, so no separate cross markers are drawn on top of it.
-        """
-        return self.is_two_point_mode and self is not PointSelectionMode.LINE
+    # These modes will all the user to zoom in on the image
+    @property
+    def zoom_enabled(self) -> bool:
+        """ Is zooming enabled for this mode """
+        return self not in (PointSelectionMode.HORIZONTAL, PointSelectionMode.LINE, PointSelectionMode.CROP)
+
+@dataclass
+class ArrowWidth:
+    """ Arrow width can be changed so must persist. This class deals with those. """
+    MIN_ARROW_WIDTH = 3
+    ARROW_WIDTH_STEP = 2
+
+    arrow_width: int = 3
+
+    def grow_arrow(self) -> None:
+        """Increase arrow width (mouse wheel up in LINE mode)."""
+        self.arrow_width += self.ARROW_WIDTH_STEP
+
+    def shrink_arrow(self) -> None:
+        """Decrease arrow width, floored at MIN_ARROW_WIDTH."""
+        self.arrow_width = max(self.MIN_ARROW_WIDTH, self.arrow_width - self.ARROW_WIDTH_STEP)
 
 @dataclass
 class PointSelectionCallbackContext:
@@ -68,35 +91,25 @@ class PointSelectionCallbackContext:
 
 @dataclass
 class PointSelectionState:
-    """Mutable selection state for a single point-selection session.
-
-    Replaces the legacy module-level globals (`selected_points`,
-    `zoom_point`, `arrow_width`). One instance belongs to exactly one
-    `PointSelectionCallback` / window.
+    """ Mutable selection state for a single point-selection session.
 
     Attributes:
-        next: The first selected point, or None if unset.
+        current: The first selected point, or None if unset.
         previous: The second selected point, or None if unset.
-        zoom_point: The point currently being zoomed around, or None.
-        arrow_width: Current arrow annotation width, adjustable via mouse
-            wheel in LINE mode.
     """
 
-    next: OptionalPoint = None
+    arrow: ArrowWidth = field(default_factory=ArrowWidth)
+    current: OptionalPoint = None
     previous: OptionalPoint = None
     zoom_point: OptionalPoint = None
-    arrow_width: int = 3
-
-    MIN_ARROW_WIDTH = 3
-    ARROW_WIDTH_STEP = 2
 
     def is_complete(self) -> bool:
         """Whether both selection points have been set."""
-        return self.next is not None and self.previous is not None
+        return self.current is not None and self.previous is not None
 
     def clear(self) -> None:
         """Reset both selection points (used on right-click cancel)."""
-        self.next = None
+        self.current = None
         self.previous = None
 
     def offer_point(self, point: Point) -> None:
@@ -106,71 +119,27 @@ class PointSelectionState:
         Args:
             point: The newly clicked point.
         """
-        # Shift unless both are already set, in which case we replace the closer one
-        if self.previous is None:
-            self.next, self.previous = point, self.next
-        elif self._distance(point, self.previous) < self._distance(point, self.next):
-            self.next = None
+        if self.current is None and self.previous is not None:
+            raise RuntimeError("Invalid PointSelectionState reached: previous is set but current is None. ")
+
+        # If previous has room or is closer shift the registered points otherwise replace current point
+        if self.previous is None or self._closer_to_previous(point):
+            self.current, self.previous = point, self.current
         else:
-            self.previous = None
+            self.current = point
 
-    def resolve_release(self, point: OptionalPoint) -> None:
-        """Resolve selection state on mouse button release.
+    def set_zoom_point(self, point: OptionalPoint) -> None:
+        """Set the zoom point for this state."""
+        self.zoom_point = point
 
-        Args:
-            point: The finalized point for this release (already adjusted
-                for any active zoom), or None to cancel/clear the pending
-                slot without setting a new point.
-        """
-        # If next is empty, reset shift to enable shifting
-        if self.next is None:
-            self.next, self.previous = self.previous, self.next
-
-        replace_first = (point is not None and self.previous is None) or (
-                self.previous is not None and self._closer_to_previous(point)
-        )
-        if replace_first:
-            self.next, self.previous = point, self.next
-        else:
-            self.next = point
-
-    def reverse(self) -> None:
-        """Swap first/second. Used for LINE mode, where selection order
-        controls arrow direction (tail -> head).
-        """
-        self.next, self.previous = self.previous, self.next
+    def clear_zoom_point(self) -> None:
+        """Clear the zoom point for this state."""
+        self.zoom_point = None
 
     def _closer_to_previous(self, point: OptionalPoint) -> bool:
-        if point is None or self.previous is None or self.next is None:
+        if point is None or self.previous is None or self.current is None:
             return False
-        return self._distance(point, self.previous) < self._distance(point, self.next)
-
-    def grow_arrow(self) -> None:
-        """Increase arrow width (mouse wheel up in LINE mode)."""
-        self.arrow_width += self.ARROW_WIDTH_STEP
-
-    def shrink_arrow(self) -> None:
-        """Decrease arrow width, floored at MIN_ARROW_WIDTH."""
-        self.arrow_width = max(self.MIN_ARROW_WIDTH, self.arrow_width - self.ARROW_WIDTH_STEP)
-
-    @staticmethod
-    def _distance(a: Point, b: Point) -> float:
-        return math.dist(a, b)
-
-
-# Callable signatures for injected drawing/display behavior. Drawing is
-# injected via the constructor (rather than imported directly from
-# `ui.drawing`) so the state machine can be unit-tested with zero OpenCV
-# window or image fixtures involved.
-#
-# `draw_marker` is deliberately factored out from shape drawing (arrow /
-# line / rect) so the same marker renderer can be reused both for the
-# tilted-cross point markers and for the zoom crosshair, instead of the
-# legacy code's two independent `cv.drawMarker` call sites.
-DrawShape = Callable[[object, PointSelectionState, PointSelectionCallbackContext], object]
-DrawMarker = Callable[[object, Point], object]
-ShowImage = Callable[[str, object, bool], None]
-ZoomImage = Callable[[object, Point], object]
+        return math.dist(point, self.previous) < math.dist(point, self.current)
 
 
 @dataclass
@@ -214,95 +183,100 @@ class PointSelectionCallback:
 
         if event == cv.EVENT_LBUTTONDOWN:
             self._on_left_down(x, y, context)
-        elif event in (cv.EVENT_LBUTTONUP, cv.EVENT_RBUTTONUP):
-            self._on_button_up(event, x, y, context)
+        elif event == cv.EVENT_LBUTTONUP:
+            self._on_left_up(x, y, context)
+        elif event == cv.EVENT_RBUTTONUP:
+            self._on_right_up(x, y, context)
         elif event == cv.EVENT_MOUSEMOVE:
             self._on_move(x, y, context)
         elif event == cv.EVENT_MOUSEWHEEL:
             self._on_wheel(flags, context)
+        else:
+            # Ignore other events (e.g. right button down, middle button, etc.)
+            pass
 
     def _on_left_down(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
-        if context.mode.is_two_point_mode:
-            self.state.offer_point((x, y))
-        else:
-            self.state.zoom_point = (x, y)
+        """ Zoom to mouse position if not in two-pt selection mode """
+        if context.mode.zoom_enabled:
+            self.state.set_zoom_point((x, y))
             self._on_move(x, y, context)
 
-    def _on_button_up(self, event: int, x: int, y: int,
-                       context: PointSelectionCallbackContext) -> None:
-        import cv2 as cv
-
-        if self.state.zoom_point is not None:
-            point: OptionalPoint = self._unzoom((x, y), self.state.zoom_point)
+    def _on_left_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
+        if context.mode.zoom_enabled:
+            # Offer zoom point to state
+            self.state.offer_point(self._scale_zoomed_coordinates((x, y), self.state.zoom_point))
         else:
-            point = (x, y)
-
-        if event == cv.EVENT_RBUTTONUP:
-            point = None
-            if context.mode.is_two_point_mode:
-                self.state.clear()
-
-        self.state.resolve_release(point)
-
-        if context.mode is PointSelectionMode.LINE:
-            # Legacy `image_event` reverses selection order specifically
-            # for LINE mode, since order controls arrow direction.
-            self.state.reverse()
-
-        if context.mode.is_two_point_mode:
+            # Offer coordinate to state and render shapes/markers
+            self.state.offer_point((x, y))
             rendered = context.image
             if context.mode.draws_point_markers:
-                for selected in (self.state.next, self.state.previous):
+                for selected in (self.state.current, self.state.previous):
                     if selected is not None:
+                        # TODO: Deal with marker drawing method
                         rendered = self.draw_marker(rendered, selected)
             if self.state.is_complete():
+                # arrow drawing method should be aware that it received a point and reverse it themselves
+                # if context.mode is PointSelectionMode.LINE:
+                    # TODO: I need to check smth here with the arrow width and whatnot
+                    # self.state.reverse()
+                # TODO: Deal with shape drawing method
                 shape = self.draw_shape.get(context.mode)
                 if shape is not None:
                     rendered = shape(rendered, self.state, context)
+            # TODO: Deal with image showing method
             self.show_image(context.window_name, rendered, False)
 
-        self.state.zoom_point = None
+    def _on_right_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
+        # Clear selection state on right-click release.
+        self.state.clear()
+        self.show_image(context.window_name, context.image, False)
 
     def _on_move(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
-        if context.mode.is_two_point_mode:
-            if self.state.next is not None and self.state.previous is None:
+        # Check that the zoompoint was set before doing anything
+        if context.mode.zoom_enabled and self.state.zoom_point is not None:
+            zoom_coord = self._scale_zoomed_coordinates((x, y))
+            # TODO: deal with ZOOMING
+            rendered = self.zoom_image(context.image, zoom_coord)
+            # TODO: deal with marker drawing method
+            rendered = self.draw_marker(rendered, zoom_coord)
+            # TODO: deal with image showing method
+            self.show_image(context.window_name, rendered, False)
+        else:
+            if self.state.current is not None and self.state.previous is None:
                 rendered = context.image
+                # TODO: deal with shape preview drawing method
                 preview = self.draw_shape_preview.get(context.mode)
                 if preview is not None:
                     rendered = preview(rendered, self.state, context)
                 if context.mode.draws_point_markers:
-                    rendered = self.draw_marker(rendered, self.state.next)
+                    # TODO: deal with marker drawing method
+                    rendered = self.draw_marker(rendered, self.state.current)
+                # TODO: deal with image showing method
                 self.show_image(context.window_name, rendered, False)
-        elif self.state.zoom_point is not None:
-            zoom_coord = self._unzoom((x, y), self.state.zoom_point)
-            rendered = self.zoom_image(context.image, zoom_coord)
-            rendered = self.draw_marker(rendered, zoom_coord)
-            self.show_image(context.window_name, rendered, False)
 
     def _on_wheel(self, flags: int, context: PointSelectionCallbackContext) -> None:
         if context.mode != PointSelectionMode.LINE or not self.state.is_complete():
             return
 
         if flags == MOUSEWHEEL_UP_FLAG:
-            self.state.grow_arrow()
+            self.state.arrow.grow_arrow()
         elif flags == MOUSEWHEEL_DOWN_FLAG:
-            self.state.shrink_arrow()
+            self.state.arrow.shrink_arrow()
         else:
             return
 
+        # TODO: deal with shape drawing method
         shape = self.draw_shape.get(context.mode)
         if shape is not None:
             rendered = shape(context.image, self.state, context)
+            # TODO: deal with image showing method
             self.show_image(context.window_name, rendered, False)
 
-    def _unzoom(self, screen_point: Point, zoom_point: Point) -> Point:
+    def _scale_zoomed_coordinates(self, point: Point) -> Point:
         """Convert an on-screen click into image coordinates while a
         zoomed preview is active.
-
-        Mirrors the legacy `image_event` math:
-        ``zoom_point + (screen_point - zoom_point) / zoom_factor``,
-        rounded to the nearest integer pixel.
         """
-        dx = (screen_point[0] - zoom_point[0]) / self.zoom_factor
-        dy = (screen_point[1] - zoom_point[1]) / self.zoom_factor
-        return (round(zoom_point[0] + dx), round(zoom_point[1] + dy))
+        zoom_point = self.state.zoom_point
+        dx = (point[0] - zoom_point[0]) / self.zoom_factor
+        dy = (point[1] - zoom_point[1]) / self.zoom_factor
+        return round(zoom_point[0] + dx), round(zoom_point[1] + dy)
