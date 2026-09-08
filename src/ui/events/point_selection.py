@@ -228,8 +228,7 @@ class PointSelectionCallback:
         # Check that the zoompoint was set before doing anything
         if context.mode.zoom_enabled and self.state.zoom_point is not None:
             zoom_coord = self._scale_zoomed_coordinates((x, y))
-            # TODO: deal with ZOOMING
-            rendered = zoom_image(context.image, zoom_coord)
+            rendered = zoom_image(context.image, zoom_coord, selection_zoom)
             rendered = draw.draw_marker(rendered, zoom_coord)
             # TODO: deal with image showing method
             show_image(context.window_name, rendered, False)
