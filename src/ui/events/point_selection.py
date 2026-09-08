@@ -11,7 +11,7 @@ sense with no window open, so it lives in ``ui``, not ``image``.
 import math
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Callable, Optional
+from typing import Optional
 
 from src.image.photograph import Photograph
 from src.defaults import selection_zoom
