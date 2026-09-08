@@ -17,7 +17,7 @@ from src.image.photograph import Photograph
 from src.defaults import selection_zoom
 from src.ui import draw
 from src.ui.show_image import show_image
-from src.ui.zoom_image import zoom_image
+from image_ops.zoom_image import zoom_image
 
 Point = tuple[int, int]
 OptionalPoint = Optional[Point]
