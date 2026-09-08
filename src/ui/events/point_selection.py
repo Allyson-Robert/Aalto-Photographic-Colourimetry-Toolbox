@@ -17,7 +17,7 @@ from src.image.photograph import Photograph
 from src.defaults import selection_zoom
 from src.ui import draw
 from src.ui.show_image import show_image
-from image_ops.zoom_image import zoom_image
+from src.image_ops.zoom_image import zoom_image
 
 Point = tuple[int, int]
 OptionalPoint = Optional[Point]
@@ -27,7 +27,13 @@ MOUSEWHEEL_DOWN_FLAG = -7864320
 
 
 class PointSelectionMode(Enum):
-    """The kind of selection currently being made in a window."""
+    """ Class/Enum holding all the information related to the point selection mode. The class is aware of the available
+    modes, the corresponding window titles, and the drawing functions for each mode. The class also provides information
+    about whether the mode requires point markers to be drawn and whether zooming is enabled for the mode. Drawing
+    functions can be called in definitive or in preview mode, in which case the current mouse position is used
+    as the second point.
+
+    """
 
     HORIZONTAL = auto() # Selecting two points to define a horizontal reference line.
     LINE = auto() # Selecting two points to define an arrow annotation.
