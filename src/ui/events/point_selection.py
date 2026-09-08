@@ -204,7 +204,8 @@ class PointSelectionCallback:
     def _on_left_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         if context.mode.zoom_enabled:
             # Offer zoom point to state
-            self.state.offer_point(self._scale_zoomed_coordinates((x, y), self.state.zoom_point))
+            self.state.offer_point(self._scale_zoomed_coordinates((x, y)))
+            self.state.clear_zoom_point()
         else:
             # Offer coordinate to state and render shapes/markers
             self.state.offer_point((x, y))
