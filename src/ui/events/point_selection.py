@@ -230,8 +230,6 @@ class PointSelectionCallback:
             zoom_coord = self._scale_zoomed_coordinates((x, y))
             rendered = zoom_image(context.image, zoom_coord, selection_zoom)
             rendered = draw.draw_marker(rendered, zoom_coord)
-            # TODO: deal with image showing method
-            show_image(context.window_name, rendered, False)
         else:
             if self.state.current is not None and self.state.previous is None:
                 rendered = context.mode.draw_shape(context.image, self.state, context, preview=True)
