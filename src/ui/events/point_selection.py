@@ -222,7 +222,7 @@ class PointSelectionCallback:
     def _on_right_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Clear selection state on right-click release.
         self.state.clear()
-        show_image(context.window_name, context.image, False)
+        show_image(context.image, context.window_name)
 
     def _on_move(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Check that the zoompoint was set before doing anything
