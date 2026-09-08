@@ -67,13 +67,18 @@ class PointSelectionMode(Enum):
         return self not in (PointSelectionMode.HORIZONTAL, PointSelectionMode.LINE, PointSelectionMode.CROP)
 
     def draw_shape(self, image: Photograph, state: 'PointSelectionState', context: 'PointSelectionCallbackContext', preview: bool = False) -> Photograph:
-        """Draw the shape for this mode."""
+        """Draw the shape for this mode. Use state points unless preview is True, in which case use the current mouse position as the second point."""
+        if preview:
+            second_point = state.preview_point
+        else:
+            second_point = state.previous
+
         if self == PointSelectionMode.HORIZONTAL:
-            return draw.draw_line(image, state.current, state.previous, preview)
+            return draw.draw_line(image, state.current, second_point, preview)
         elif self == PointSelectionMode.LINE:
-            return draw.draw_arrow(image, state.current, state.previous, state.arrow.arrow_width, preview)
+            return draw.draw_arrow(image, state.current, second_point, state.arrow.arrow_width, preview)
         elif self == PointSelectionMode.CROP:
-            return draw.draw_rectangle(image, state.current, state.previous, preview)
+            return draw.draw_rectangle(image, state.current, second_point, preview)
         else:
             raise ValueError(f"Mode {self} does not support drawing a shape.")
 
@@ -122,6 +127,7 @@ class PointSelectionState:
     current: OptionalPoint = None
     previous: OptionalPoint = None
     zoom_point: OptionalPoint = None
+    preview_point: OptionalPoint = None
 
     def is_complete(self) -> bool:
         """Whether both selection points have been set."""
@@ -131,6 +137,7 @@ class PointSelectionState:
         """Reset both selection points (used on right-click cancel)."""
         self.current = None
         self.previous = None
+        self.preview_point = None
 
     def offer_point(self, point: Point) -> None:
         """Insert `point` into the selection, replacing whichever existing
@@ -142,11 +149,16 @@ class PointSelectionState:
         if self.current is None and self.previous is not None:
             raise RuntimeError("Invalid PointSelectionState reached: previous is set but current is None. ")
 
+        # If the point is already one of the selected points, do nothing
+        if point in (self.current, self.previous):
+            return None
+
         # If previous has room or is closer shift the registered points otherwise replace current point
         if self.previous is None or self._closer_to_previous(point):
             self.current, self.previous = point, self.current
         else:
             self.current = point
+        return None
 
     def set_zoom_point(self, point: OptionalPoint) -> None:
         """Set the zoom point for this state."""
@@ -202,28 +214,33 @@ class PointSelectionCallback:
             pass
 
     def _on_left_down(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
-        """ Zoom to mouse position if not in two-pt selection mode """
+        """ Zoom to mouse position if not in two-pt selection mode and offer point to state """
         if context.mode.zoom_enabled:
             self.state.set_zoom_point((x, y))
             self._on_move(x, y, context)
+        else:
+            self.state.offer_point((x, y))
 
     def _on_left_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
+        rendered = context.image
+
+        # Offer (zoom) point and either release zoom or render shapes
         if context.mode.zoom_enabled:
-            # Offer zoom point to state
             self.state.offer_point(self._scale_zoomed_coordinates((x, y)))
             self.state.clear_zoom_point()
         else:
-            # Offer coordinate to state and render shapes/markers
             self.state.offer_point((x, y))
-            rendered = context.image
-            if context.mode.draws_point_markers:
-                for selected in (self.state.current, self.state.previous):
-                    if selected is not None:
-                        rendered = draw.draw_marker(rendered, selected)
             if self.state.is_complete():
                 rendered = context.mode.draw_shape(rendered, self.state, context, preview=False)
-            rendered_image = Photograph(rendered, context.image.get_metadata())
-            show_image(rendered_image, context.window_name)
+
+        # Add markers if the mode calls for them
+        if context.mode.draws_point_markers:
+            for selected in (self.state.current, self.state.previous):
+                if selected is not None:
+                    rendered = draw.draw_marker(rendered, selected)
+
+        # Show the (un)modified image
+        show_image(rendered, context.window_name)
 
     def _on_right_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Clear selection state on right-click release.
@@ -231,19 +248,21 @@ class PointSelectionCallback:
         show_image(context.image, context.window_name)
 
     def _on_move(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
+        rendered = context.image
+
         # Check that the zoompoint was set before doing anything
         if context.mode.zoom_enabled and self.state.zoom_point is not None:
             zoom_coord = self._scale_zoomed_coordinates((x, y))
-            rendered = zoom_image(context.image, zoom_coord, selection_zoom)
+            rendered = zoom_image(rendered, zoom_coord, self.zoom_factor)
             rendered = draw.draw_marker(rendered, zoom_coord)
         else:
             if self.state.current is not None and self.state.previous is None:
-                rendered = context.mode.draw_shape(context.image, self.state, context, preview=True)
+                self.state.preview_point = (x, y)
+                rendered = context.mode.draw_shape(rendered, self.state, context, preview=True)
                 if context.mode.draws_point_markers:
                     rendered = draw.draw_marker(rendered, self.state.current)
 
-        rendered_image = Photograph(rendered, context.image.get_metadata())
-        show_image(rendered_image, context.window_name)
+        show_image(rendered, context.window_name)
 
     def _on_wheel(self, flags: int, context: PointSelectionCallbackContext) -> None:
         if context.mode != PointSelectionMode.LINE or not self.state.is_complete():
@@ -258,8 +277,7 @@ class PointSelectionCallback:
 
         rendered = draw.draw_arrow(context.image, start_point=self.state.previous, end_point=self.state.current,
                                    width=self.state.arrow.arrow_width)
-        rendered_image = Photograph(rendered, context.image.get_metadata())
-        show_image(rendered_image, context.window_name)
+        show_image(rendered, context.window_name)
 
     def _scale_zoomed_coordinates(self, point: Point) -> Point:
         """Convert an on-screen click into image coordinates while a
