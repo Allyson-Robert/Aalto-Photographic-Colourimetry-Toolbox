@@ -11,10 +11,13 @@ sense with no window open, so it lives in ``ui``, not ``image``.
 import math
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Callable, Optional, Protocol
+from typing import Callable, Optional
 
 from src.image.photograph import Photograph
 from src.defaults import selection_zoom
+from src.ui import draw
+from src.ui.show_image import show_image
+from src.ui.zoom_image import zoom_image
 
 Point = tuple[int, int]
 OptionalPoint = Optional[Point]
@@ -56,6 +59,17 @@ class PointSelectionMode(Enum):
     def zoom_enabled(self) -> bool:
         """ Is zooming enabled for this mode """
         return self not in (PointSelectionMode.HORIZONTAL, PointSelectionMode.LINE, PointSelectionMode.CROP)
+
+    def draw_shape(self, image: Photograph, state: 'PointSelectionState', context: 'PointSelectionCallbackContext', preview: bool = False) -> Photograph:
+        """Draw the shape for this mode."""
+        if self == PointSelectionMode.HORIZONTAL:
+            return draw.draw_line(image, state.current, state.previous, preview)
+        elif self == PointSelectionMode.LINE:
+            return draw.draw_arrow(image, state.current, state.previous, state.arrow.arrow_width, preview)
+        elif self == PointSelectionMode.CROP:
+            return draw.draw_rectangle(image, state.current, state.previous, preview)
+        else:
+            raise ValueError(f"Mode {self} does not support drawing a shape.")
 
 @dataclass
 class ArrowWidth:
@@ -148,32 +162,18 @@ class PointSelectionCallback:
     visual feedback.
 
     One instance should be constructed per window and passed directly to
-    ``cv2.setMouseCallback``. All drawing/display behavior is injected as
-    callables so this class carries no `ui.drawing` import of its own,
+    ``cv2.setMouseCallback``. All draw/display behavior is injected as
+    callables so this class carries no `ui.draw` import of its own,
     keeping the state machine independently testable.
 
     Attributes:
         state: The selection state this callback mutates.
-        draw_shape: Mode-keyed callables invoked on button release to
-            render the finalized shape (line / arrow / rect). Markers are
-            drawn separately via `draw_marker`.
-        draw_shape_preview: Mode-keyed callables invoked on mouse move to
-            render a live shape preview while the second point is unset.
-        draw_marker: Callable drawing a single point marker. Reused both
-            for selected-point crosses and the zoom-preview crosshair.
-        zoom_image: Callable producing a zoomed view around a point.
-        show_image: Callable that pushes a rendered frame to the window.
         zoom_factor: Zoom multiplier used to convert on-screen clicks back
             to image coordinates while a zoomed preview is active. Defaults
             to `src.defaults.selection_zoom`; override for tests.
     """
 
     state: PointSelectionState
-    draw_shape: dict[PointSelectionMode, DrawShape]
-    draw_shape_preview: dict[PointSelectionMode, DrawShape]
-    draw_marker: DrawMarker
-    zoom_image: ZoomImage
-    show_image: ShowImage
     zoom_factor: float = selection_zoom
 
     def __call__(self, event: int, x: int, y: int, flags: int,
@@ -212,47 +212,33 @@ class PointSelectionCallback:
             if context.mode.draws_point_markers:
                 for selected in (self.state.current, self.state.previous):
                     if selected is not None:
-                        # TODO: Deal with marker drawing method
-                        rendered = self.draw_marker(rendered, selected)
+                        rendered = draw.draw_marker(rendered, selected)
             if self.state.is_complete():
-                # arrow drawing method should be aware that it received a point and reverse it themselves
-                # if context.mode is PointSelectionMode.LINE:
-                    # TODO: I need to check smth here with the arrow width and whatnot
-                    # self.state.reverse()
-                # TODO: Deal with shape drawing method
-                shape = self.draw_shape.get(context.mode)
-                if shape is not None:
-                    rendered = shape(rendered, self.state, context)
+                rendered = context.mode.draw_shape(rendered, self.state, context, preview=False)
             # TODO: Deal with image showing method
-            self.show_image(context.window_name, rendered, False)
+            show_image(context.window_name, rendered, False)
 
     def _on_right_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Clear selection state on right-click release.
         self.state.clear()
-        self.show_image(context.window_name, context.image, False)
+        show_image(context.window_name, context.image, False)
 
     def _on_move(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Check that the zoompoint was set before doing anything
         if context.mode.zoom_enabled and self.state.zoom_point is not None:
             zoom_coord = self._scale_zoomed_coordinates((x, y))
             # TODO: deal with ZOOMING
-            rendered = self.zoom_image(context.image, zoom_coord)
-            # TODO: deal with marker drawing method
-            rendered = self.draw_marker(rendered, zoom_coord)
+            rendered = zoom_image(context.image, zoom_coord)
+            rendered = draw.draw_marker(rendered, zoom_coord)
             # TODO: deal with image showing method
-            self.show_image(context.window_name, rendered, False)
+            show_image(context.window_name, rendered, False)
         else:
             if self.state.current is not None and self.state.previous is None:
-                rendered = context.image
-                # TODO: deal with shape preview drawing method
-                preview = self.draw_shape_preview.get(context.mode)
-                if preview is not None:
-                    rendered = preview(rendered, self.state, context)
+                rendered = context.mode.draw_shape(context.image, self.state, context, preview=True)
                 if context.mode.draws_point_markers:
-                    # TODO: deal with marker drawing method
-                    rendered = self.draw_marker(rendered, self.state.current)
+                    rendered = draw.draw_marker(rendered, self.state.current)
                 # TODO: deal with image showing method
-                self.show_image(context.window_name, rendered, False)
+                show_image(context.window_name, rendered, False)
 
     def _on_wheel(self, flags: int, context: PointSelectionCallbackContext) -> None:
         if context.mode != PointSelectionMode.LINE or not self.state.is_complete():
@@ -265,12 +251,10 @@ class PointSelectionCallback:
         else:
             return
 
-        # TODO: deal with shape drawing method
-        shape = self.draw_shape.get(context.mode)
-        if shape is not None:
-            rendered = shape(context.image, self.state, context)
-            # TODO: deal with image showing method
-            self.show_image(context.window_name, rendered, False)
+        rendered = draw.draw_arrow(context.image, start_point=self.state.previous, end_point=self.state.current,
+                                   width=self.state.arrow.arrow_width)
+        # TODO: deal with image showing method
+        show_image(context.window_name, rendered, False)
 
     def _scale_zoomed_coordinates(self, point: Point) -> Point:
         """Convert an on-screen click into image coordinates while a
