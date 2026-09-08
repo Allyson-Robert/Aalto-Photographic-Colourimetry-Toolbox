@@ -216,8 +216,8 @@ class PointSelectionCallback:
                         rendered = draw.draw_marker(rendered, selected)
             if self.state.is_complete():
                 rendered = context.mode.draw_shape(rendered, self.state, context, preview=False)
-            # TODO: Deal with image showing method
-            show_image(context.window_name, rendered, False)
+            rendered_image = Photograph(rendered, context.image.get_metadata())
+            show_image(rendered_image, context.window_name)
 
     def _on_right_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Clear selection state on right-click release.
@@ -238,8 +238,9 @@ class PointSelectionCallback:
                 rendered = context.mode.draw_shape(context.image, self.state, context, preview=True)
                 if context.mode.draws_point_markers:
                     rendered = draw.draw_marker(rendered, self.state.current)
-                # TODO: deal with image showing method
-                show_image(context.window_name, rendered, False)
+
+        rendered_image = Photograph(rendered, context.image.get_metadata())
+        show_image(rendered_image, context.window_name)
 
     def _on_wheel(self, flags: int, context: PointSelectionCallbackContext) -> None:
         if context.mode != PointSelectionMode.LINE or not self.state.is_complete():
@@ -254,8 +255,8 @@ class PointSelectionCallback:
 
         rendered = draw.draw_arrow(context.image, start_point=self.state.previous, end_point=self.state.current,
                                    width=self.state.arrow.arrow_width)
-        # TODO: deal with image showing method
-        show_image(context.window_name, rendered, False)
+        rendered_image = Photograph(rendered, context.image.get_metadata())
+        show_image(rendered_image, context.window_name)
 
     def _scale_zoomed_coordinates(self, point: Point) -> Point:
         """Convert an on-screen click into image coordinates while a
