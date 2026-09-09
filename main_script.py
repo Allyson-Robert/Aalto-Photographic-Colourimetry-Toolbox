@@ -369,7 +369,8 @@ def main():
 
             # Get reference gray image
             gray_path = os.path.join(settings.main_directory, r'Calibration/Calibration Images', 'calib-gray_' + focus_height + '.' + settings.input_extension)
-            gray_img = convert_image_colour(Photograph.from_image_location(gray_path), input_space='BGR', output_space='LAB')
+            raw_image = Photograph.from_image_location(gray_path)
+            gray_img = convert_image_colour(raw_image, input_space='BGR', output_space='LAB')
 
             if gray_img is None:
                 print()
