@@ -1,3 +1,5 @@
+from colour.appearance.nayatani95 import scaling_coefficient
+
 import settings
 import utilities
 import image_utilities
@@ -235,25 +237,27 @@ def crop_samples(sample_name, adjust=False, ref_gray=False, crop_settings=None):
         return new_crop_settings
 
 
-def match_crop(img, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), convert=True, first=False,
+from src.image.photograph import Photograph
+def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), convert=True, first=False,
                force_prompt=None, close_window=True):
     """Mode 0: Crop first image, 1: Match crop"""
 
     import src.ui.events.point_selection as point_selection
-    from src.image.photograph import Photograph
+    from src.colour_ops.convert_image_colour import convert_image_colour, convert_colour_depth
+    from src.image_ops.scale_image import scale_image
+    import src.image_ops.utils as image_ops_utils
+
     assert isinstance(img, Photograph), "img must be an instance of Photograph"
 
-    in_img = img.get_image()
-
     if convert:
-        # Convert to sRGB 8bit
-        in_img = convert_color(in_img, 'show')
-    else:
-        # Only convert to 8bit
-        in_img = (np.interp(in_img[0], (0, main_script.max_val[in_img[1][0][1]]), (0, main_script.max_val[0])
-                            ).astype(main_script.bit_type[0]), in_img[1])
-    if mode == 0:  # Crop first image
-        img_c, img_scale = scale_image((in_img, img.get_metadata()))  # Scale to max window size
+        # Convert to sRGB 8bit (stuck to BGR for now)
+        img = convert_image_colour(img, input_space='LAB', output_space='BGR')
+    img = convert_colour_depth(img, input_depth=img.get_bit_depth(), output_depth=8)
+
+    if mode == 0:  # Crop first imageB
+        scaling_coefficient = image_ops_utils.get_scaling_coefficient(img, settings.max_window)
+        img = scale_image(img, scaling_coefficient)
+
         if ref_points[0] != ((0, 0), (0, 0)):
             # Previous rotation data exists -> Apply
             img_r = rotate_image(img_c, ref_points[0])

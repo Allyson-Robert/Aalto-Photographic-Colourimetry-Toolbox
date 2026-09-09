@@ -14,6 +14,9 @@ from matplotlib import pyplot as plt
 import colour_checker_detection   # Identifying the colorchecker
 import copy
 
+# New imports
+from src.image.photograph import Photograph
+from src.colour_ops.convert_image_colour import convert_image_colour, convert_colour_depth
 
 max_val = (pow(2, 8) - 1, pow(2, 16) - 1)  # 8bit: 0-255 - 16bit: 0-65635
 # Color models corresponding to color spaces in settings.py
@@ -365,17 +368,18 @@ def main():
             start_time = time.perf_counter()
 
             # Get reference gray image
-            new_gray_img = image_utilities.new_read_image('calib-gray_' + focus_height + '.' + settings.input_extension,
-                                                  r'Calibration/Calibration Images')
+            gray_path = os.path.join(settings.main_directory, r'Calibration/Calibration Images', 'calib-gray_' + focus_height + '.' + settings.input_extension)
+            gray_img = convert_image_colour(Photograph.from_image_location(gray_path), input_space='BGR', output_space='LAB')
 
-            if new_gray_img is None:
+            if gray_img is None:
                 print()
                 utilities.print_color("Warning: Ref. gray not found!", 'warning')
                 print()
             else:
                 # if use_margins:
                     # gray_img = image_utilities.get_safe_area(gray_img)  # Crop to safety margins
-                ref_crop = image_manipulation.match_crop(new_gray_img, 0)  # Prompt for crop
+                # ref_crop = image_manipulation.match_crop(gray_img, 0)  # Prompt for crop
+                ref_crop = image_manipulation.match_crop(gray_img, 0)  # Prompt for crop
                 lt_corner = image_utilities.cvt_point(ref_crop[1][0], -1, gray_img[0].shape)  # Upper left corner
 
                 # Rotate and crop as selected
