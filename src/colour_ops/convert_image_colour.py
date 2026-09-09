@@ -6,6 +6,7 @@ import src.defaults as defaults
 from src.image.photograph import Photograph
 from src.utils.calc.depth_to_max import depth_to_max
 
+colour.utilities.set_default_float_dtype(np.float32)
 
 def convert_image_colour(img: Photograph, input_space: str, output_space: str) -> Photograph:
     """Convert image data from one supported color space to another.
@@ -44,7 +45,8 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
         case 'BGR':
             # Flip and rescale the BGR values to RGB (0 - 1)
             maximum = depth_to_max(image_depth)
-            rgb_vals = np.interp(np.flip(image_data, -1),(0, maximum), (0, 1))
+            # rgb_vals = np.interp(np.flip(image_data, -1),(0, maximum), (0, 1))
+            rgb_vals = np.flip(image_data, -1).astype(np.float32) / maximum
 
             # Use colour library to convert RGB to XYZ D50
             xyz_vals = colour.RGB_to_XYZ(image_model.cctf_decoding(rgb_vals),
@@ -65,7 +67,6 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
                                                                         'D50']))
 
     # Convert XYZ D50 to the desired output format.
-    # TODO: Revisit the bit-depth handling for 8-bit and 16-bit conversions; the BGR and RGB ranges are still a potential source of issues.
     converted_image_data = None
     match output_space:
         case 'BGR':
@@ -75,10 +76,10 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
                 colourspace=defaults.colour_models[defaults.output_color_space],
                 illuminant=colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][defaults.output_illuminant]
             ))
-            converted_image_data = (
-                np.interp(np.flip(rgb_vals, -1), (0, 1), (0, depth_to_max(defaults.output_depth)))
-                .astype(f'uint{defaults.output_depth}')
-            )
+
+            maximum = depth_to_max(defaults.output_depth)
+            scaled = np.clip(np.flip(rgb_vals, -1), 0, 1) * maximum
+            converted_image_data = np.round(scaled).astype(f'uint{defaults.output_depth}')
 
         case 'LAB':
             xyz_vals = colour.chromatic_adaptation(
@@ -105,4 +106,25 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
 
     # TODO: Revisit how metadata is copied for converted images to ensure it stays consistent with the new image data.
     # Copy the metadata from the original image.
+    return Photograph(converted_image_data, img.get_metadata())
+
+def convert_colour_depth(img: Photograph, input_depth: float | int, output_depth: float | int) -> Photograph:
+    assert input_depth in (1.0, 8, 16), "Input scale must be 1.0, 8, or 16"
+    assert output_depth in (1.0, 8, 16), "Output scale must be 1.0, 8, or 16"
+
+    if input_depth == output_depth:
+        return img
+
+    factor = depth_to_max(output_depth) / depth_to_max(input_depth)
+    img_content = img.get_image()
+
+    scaled = img_content.astype(np.float32) * factor
+
+    if output_depth == 1.0:
+        converted_image_data = scaled.astype(np.float32)  # match your float convention
+    elif output_depth == 8:
+        converted_image_data = np.clip(np.round(scaled), 0, 255).astype(np.uint8)
+    else:  # 16
+        converted_image_data = np.clip(np.round(scaled), 0, 65535).astype(np.uint16)
+
     return Photograph(converted_image_data, img.get_metadata())
