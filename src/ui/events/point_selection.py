@@ -253,12 +253,16 @@ class PointSelectionCallback:
             zoom_coord = self._scale_zoomed_coordinates((x, y))
             rendered = zoom_image(rendered, zoom_coord, self.zoom_factor)
             rendered = draw.draw_marker(rendered, zoom_coord)
+
+        # Draw preview shapes until selection is complete
+        elif self.state.current is not None and self.state.previous is None:
+            self.state.preview_point = (x, y)
+            rendered = context.mode.draw_shape(rendered, self.state, context, preview=True)
+            if context.mode.draws_point_markers:
+                rendered = draw.draw_marker(rendered, self.state.current)
+        # Skip
         else:
-            if self.state.current is not None and self.state.previous is None:
-                self.state.preview_point = (x, y)
-                rendered = context.mode.draw_shape(rendered, self.state, context, preview=True)
-                if context.mode.draws_point_markers:
-                    rendered = draw.draw_marker(rendered, self.state.current)
+            return None
 
         # Show updated image with preview shapes
         show_image(rendered, context.mode.window_title)
