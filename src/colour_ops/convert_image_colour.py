@@ -106,3 +106,24 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
     # TODO: Revisit how metadata is copied for converted images to ensure it stays consistent with the new image data.
     # Copy the metadata from the original image.
     return Photograph(converted_image_data, img.get_metadata())
+
+def convert_colour_scale(img: Photograph, input_scale: float | int, output_scale: float | int) -> Photograph:
+    assert input_scale in (1.0, 255, 65535), "Input scale must be 1.0, 255, or 65535"
+    assert output_scale in (1.0, 255, 65535), "Output scale must be 1.0, 255, or 65535"
+
+    if input_scale == output_scale:
+        return img
+
+    factor = output_scale / input_scale
+    img_content = img.get_image()
+
+    scaled = img_content.astype(np.float64) * factor
+
+    if output_scale == 1.0:
+        converted_image_data = scaled.astype(np.float32)  # match your float convention
+    elif output_scale == 255:
+        converted_image_data = np.clip(np.round(scaled), 0, 255).astype(np.uint8)
+    else:  # 65535
+        converted_image_data = np.clip(np.round(scaled), 0, 65535).astype(np.uint16)
+
+    return Photograph(converted_image_data, img.get_metadata())
