@@ -67,7 +67,6 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
                                                                         'D50']))
 
     # Convert XYZ D50 to the desired output format.
-    # TODO: Revisit the bit-depth handling for 8-bit and 16-bit conversions; the BGR and RGB ranges are still a potential source of issues.
     converted_image_data = None
     match output_space:
         case 'BGR':
