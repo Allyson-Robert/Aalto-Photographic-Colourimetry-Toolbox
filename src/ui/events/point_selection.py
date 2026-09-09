@@ -106,12 +106,10 @@ class PointSelectionCallbackContext:
     Attributes:
         mode: The selection mode active for this window.
         image: The base image
-        window_name: Name of the OpenCV window this context belongs to.
     """
 
     mode: PointSelectionMode
     image: Photograph
-    window_name: str
 
 
 @dataclass
@@ -240,12 +238,12 @@ class PointSelectionCallback:
                     rendered = draw.draw_marker(rendered, selected)
 
         # Show the (un)modified image
-        show_image(rendered, context.window_name)
+        show_image(rendered, context.mode.window_title)
 
     def _on_right_up(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         # Clear selection state on right-click release.
         self.state.clear()
-        show_image(context.image, context.window_name)
+        show_image(context.image, context.mode.window_title)
 
     def _on_move(self, x: int, y: int, context: PointSelectionCallbackContext) -> None:
         rendered = context.image
@@ -262,7 +260,8 @@ class PointSelectionCallback:
                 if context.mode.draws_point_markers:
                     rendered = draw.draw_marker(rendered, self.state.current)
 
-        show_image(rendered, context.window_name)
+        # Show updated image with preview shapes
+        show_image(rendered, context.mode.window_title)
 
     def _on_wheel(self, flags: int, context: PointSelectionCallbackContext) -> None:
         if context.mode != PointSelectionMode.LINE or not self.state.is_complete():
@@ -277,7 +276,7 @@ class PointSelectionCallback:
 
         rendered = draw.draw_arrow(context.image, start_point=self.state.previous, end_point=self.state.current,
                                    width=self.state.arrow.arrow_width)
-        show_image(rendered, context.window_name)
+        show_image(rendered, context.mode.window_title)
 
     def _scale_zoomed_coordinates(self, point: Point) -> Point:
         """Convert an on-screen click into image coordinates while a
