@@ -9,151 +9,9 @@ import numpy as np
 import cv2 as cv
 import colour
 
+from image.photograph import Photograph
+
 set_all = False  # Set rest of ref. points based on current selection?
-
-
-def convert_color(in_cols, conversion, is_thread=False, operations=1, gray_refs=((0, 0, 0), None)):
-    """Conversion: 'in': BGR(input)->LAB(D50), 'out': LAB(D50)->BGR(output), 'show': LAB(D50)->BGR(0-255 8bit sRGB),
-    'adapt': LAB->LAB(D50), 'LAB': LAB(D50)->LAB(output), 'RGB': LAB(D50)->RGB(0.0-1.0 sRGB), 'xy': LAB(D50)->xy,
-    'gray-adapt': Adapt LAB based on ref. grays"""
-    # If already thread or no need for threading, directly compute
-    if is_thread or settings.cpu_threads == 0 or max(in_cols[0].shape) < settings.cpu_threads:
-        # Split data based on memory usage
-        if len(in_cols[0].shape) > 1:
-            memory_usage = np.prod(in_cols[0].shape) * operations
-            split_cols = np.array_split(in_cols[0], math.ceil(memory_usage / settings.system_memory))
-        else:
-            split_cols = [in_cols[0]]
-
-        out_cols = []
-        for i in range(len(split_cols)):
-            split_cols[i] = (split_cols[i], in_cols[1])  # Include metadata in split colors
-
-            if conversion == 'in':  # BGR(input) -> LAB(D50)
-                # BGR (0 - 2^depth-1) -> RGB (0 - 1)
-                rgb_vals = np.interp(np.flip(split_cols[i][0], -1),
-                                     (0, main_script.max_val[split_cols[i][1][0][1]]), (0, 1))
-
-                # RGB (0 - 1) -> XYZ D50 (0 - 1)
-                xyz_vals = colour.RGB_to_XYZ(main_script.color_model[split_cols[i][1][0][0]]
-                                             .cctf_decoding(rgb_vals),
-                                             colourspace=main_script.color_model[split_cols[i][1][0][0]],
-                                             illuminant=colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D50'])
-                # XYZ D50 (0 - 1) -> LAB D50 (0 - 100, -100 - 100, -100 - 100)
-                lab_vals = colour.XYZ_to_Lab(xyz_vals, illuminant=colour.CCS_ILLUMINANTS[
-                    'CIE 1931 2 Degree Standard Observer']['D50'])
-
-                out_cols.append(lab_vals)
-
-            elif conversion == 'adapt':  # LAB -> LAB(D50)
-                # LAB (0 - 100, -100 - 100, -100 - 100) -> XYZ (0 - 1)
-                xyz_vals = colour.Lab_to_XYZ(split_cols[i][0], illuminant=colour.CCS_ILLUMINANTS[
-                    'CIE 1931 2 Degree Standard Observer'][in_cols[1]])
-
-                # XYZ (0 - 1) -> XYZ D50 (0 - 1)
-                xyz_vals = colour.chromatic_adaptation(xyz_vals, colour.xy_to_XYZ(
-                    colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][in_cols[1]]),
-                    colour.xy_to_XYZ(colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D50']))
-
-                # XYZ D50 (0 - 1) -> LAB D50 (0 - 100, -100 - 100, -100 - 100)
-                lab_vals = colour.XYZ_to_Lab(xyz_vals, illuminant=colour.CCS_ILLUMINANTS[
-                    'CIE 1931 2 Degree Standard Observer']['D50'])
-
-                out_cols.append(lab_vals)
-
-            else:
-                # LAB D50 (0 - 100, -100 - 100, -100 - 100) -> XYZ D50 (0 - 1)
-                xyz_vals = colour.Lab_to_XYZ(split_cols[i][0], illuminant=colour.CCS_ILLUMINANTS[
-                    'CIE 1931 2 Degree Standard Observer']['D50'])
-
-                if conversion == 'out':  # LAB(D50) -> BGR(output)
-                    # XYZ D50 (0 - 1) -> RGB (0 - 1)
-                    rgb_vals = main_script.color_model[settings.output_color_space].cctf_encoding(colour.XYZ_to_RGB(
-                        xyz_vals,
-                        colourspace = main_script.color_model[settings.output_color_space],
-                        illuminant = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D50']))
-                    
-                    # RGB (0 - 1) -> BGR (0 - 2^depth-1)
-                    bgr_vals = (np.interp(np.flip(rgb_vals, -1),
-                                          (0, 1), (0, main_script.max_val[settings.output_depth]))
-                                .astype(main_script.bit_type[settings.output_depth]))
-
-                    out_cols.append(bgr_vals)
-
-                elif conversion == 'show':  # LAB(D50) -> BGR(0-255 8bit sRGB)
-                    # XYZ D50 (0 - 1) -> sRGB (0 - 1)
-                    rgb_vals = main_script.color_model[0].cctf_encoding(colour.XYZ_to_RGB(
-                        xyz_vals,
-                        colourspace = main_script.color_model[0],
-                        illuminant = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D50']))
-
-                    # sRGB (0 - 1) -> BGR (0 - 255)
-                    bgr_vals = (np.interp(np.flip(rgb_vals, -1), (0, 1),
-                                          (0, main_script.max_val[0]))
-                                .astype(main_script.bit_type[0]))
-
-                    out_cols.append(bgr_vals)
-
-                elif conversion == 'LAB':  # LAB(D50) -> LAB(output)
-                    # XYZ D50 (0 - 1) -> XYZ out (0 - 1)
-                    xyz_vals = colour.chromatic_adaptation(xyz_vals, colour.xy_to_XYZ(
-                        colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D50']),
-                                                           colour.xy_to_XYZ(
-                                                               colour.CCS_ILLUMINANTS[
-                                                                   'CIE 1931 2 Degree Standard Observer'][
-                                                                   settings.output_illuminant]))
-
-                    # XYZ out (0 - 1) -> LAB out (0 - 100, -100 - 100, -100 - 100)
-                    lab_vals = colour.XYZ_to_Lab(xyz_vals, illuminant=colour.CCS_ILLUMINANTS[
-                        'CIE 1931 2 Degree Standard Observer'][settings.output_illuminant])
-
-                    out_cols.append(lab_vals)
-
-                elif conversion == 'RGB':  # LAB(D50) -> RGB(0.0-1.0 sRGB)
-                    # XYZ D50 (0 - 1) -> sRGB (0 - 1)
-                    rgb_vals = main_script.color_model[0].cctf_encoding(colour.XYZ_to_RGB(
-                        xyz_vals,
-                        colourspace = main_script.color_model[0],
-                        illuminant = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D50']))                   
-
-                    rgb_vals = np.clip(rgb_vals, 0, 1)  # Clip to allowed range
-
-                    out_cols.append(rgb_vals)
-
-                elif conversion == 'xy':  # LAB(D50) -> xy
-                    # XYZ D50 (0 - 1) -> xy (0 - 1)
-                    xy_vals = colour.XYZ_to_xy(xyz_vals) 
-
-                    out_cols.append(xy_vals)
-
-                elif conversion == 'gray-adapt':  # Adapt LAB based on ref. grays
-                    xyz_refs = []
-                    # Convert ref. grays to XYZ
-                    for j in range(2):
-                        # LAB D50 (0 - 100, -100 - 100, -100 - 100) -> XYZ D50 (0 - 1)
-                        xyz_refs.append(colour.Lab_to_XYZ(gray_refs[j], illuminant=colour.CCS_ILLUMINANTS[
-                            'CIE 1931 2 Degree Standard Observer']['D50']))
-
-                    # Adapt XYZ with ref. grays
-                    xyz_vals = colour.chromatic_adaptation(xyz_vals, xyz_refs[1], xyz_refs[0])
-
-                    # XYZ D50 (0 - 1) -> LAB D50 (0 - 100, -100 - 100, -100 - 100)
-                    lab_vals = colour.XYZ_to_Lab(xyz_vals, illuminant=colour.CCS_ILLUMINANTS[
-                        'CIE 1931 2 Degree Standard Observer']['D50'])
-
-                    out_cols.append(lab_vals)
-
-                else:
-                    utilities.print_color(f"Invalid color conversion '{conversion}'!", 'error')
-
-        out_cols = (np.concatenate(out_cols), in_cols[1])  # Combine split colors
-
-        return out_cols
-    else:
-        # Perform multithreaded operations
-        out_cols = image_utilities.parallel_process(convert_color, in_cols,
-                                                    (conversion, True, settings.cpu_threads, gray_refs))
-        return out_cols
 
 
 def adjust_color(in_img, in_lut, is_thread=False, gray_refs=((0, 0, 0), None), operations=1):
@@ -377,9 +235,16 @@ def crop_samples(sample_name, adjust=False, ref_gray=False, crop_settings=None):
         return new_crop_settings
 
 
-def match_crop(in_img, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), convert=True, first=False,
+def match_crop(img, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), convert=True, first=False,
                force_prompt=None, close_window=True):
     """Mode 0: Crop first image, 1: Match crop"""
+
+    import src.ui.events.point_selection as point_selection
+    from src.image.photograph import Photograph
+    assert isinstance(img, Photograph), "img must be an instance of Photograph"
+
+    in_img = img.get_image()
+
     if convert:
         # Convert to sRGB 8bit
         in_img = convert_color(in_img, 'show')
@@ -388,7 +253,7 @@ def match_crop(in_img, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), 
         in_img = (np.interp(in_img[0], (0, main_script.max_val[in_img[1][0][1]]), (0, main_script.max_val[0])
                             ).astype(main_script.bit_type[0]), in_img[1])
     if mode == 0:  # Crop first image
-        img_c, img_scale = scale_image(in_img)
+        img_c, img_scale = scale_image((in_img, img.get_metadata()))  # Scale to max window size
         if ref_points[0] != ((0, 0), (0, 0)):
             # Previous rotation data exists -> Apply
             img_r = rotate_image(img_c, ref_points[0])
@@ -399,6 +264,10 @@ def match_crop(in_img, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), 
             ref_rotated = 0
 
         # Select horizontal line
+        context = point_selection.PointSelectionCallbackContext(mode=point_selection.PointSelectionMode.HORIZONTAL,
+                                                                image=Photograph(img_r, img.get_metadata()),
+                                                                window_name=settings.prompts['horizontal'])
+
         prompt = settings.prompts['horizontal']
         key_pressed = None
         ref_angle = None
@@ -406,7 +275,9 @@ def match_crop(in_img, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), 
         # Only accept rotation with none (= no rotation or previous rotation if adjusting) or both selection points
         while key_pressed is None or any(np.sum(elem) == -2 for elem in image_utilities.selected_points):
             image_utilities.show_image(prompt, img_r, False)
-            cv.setMouseCallback(prompt, image_utilities.image_event, param=[prompt, img_r])
+            # cv.setMouseCallback(prompt, image_utilities.image_event, param=[prompt, img_r])
+            callback_callable = point_selection.PointSelectionCallback(context=context)
+            cv.setMouseCallback(windowName=prompt, onMouse=callback_callable)
             key_pressed = image_utilities.wait_key()
             if key_pressed == 'escape':
                 # Skip image
@@ -575,55 +446,6 @@ def crop_target(in_img, template):
                             - (out_img[0].shape[0] / 2 - new_ref[1])))
 
     return out_img, overlay_offset
-
-
-def translate_image(in_img, offset):
-    """Offset image by given (x, y) values"""
-    translate_matrix = np.float32([[1, 0, offset[0]], [0, 1, -offset[1]]])
-    return cv.warpAffine(in_img[0].copy(), translate_matrix, (in_img[0].shape[1], in_img[0].shape[0])), in_img[1]
-
-
-def scale_image(in_img, size_multiplier=-1.0):
-    """Scale image by multiplier, or to max window size if left empty"""
-    img_s = (in_img[0].copy(), in_img[1])  # Don't edit original image
-    if size_multiplier == -1.0:
-        # Calculate maximum size multiplier
-        img_scale = min(settings.max_window[0] / img_s[0].shape[1],
-                        settings.max_window[1] / img_s[0].shape[0])
-    else:
-        img_scale = size_multiplier
-    img_scaled = (cv.resize(img_s[0], None, fx=img_scale, fy=img_scale, interpolation=cv.INTER_NEAREST), img_s[1])
-
-    return img_scaled, img_scale
-
-
-def zoom_image(in_img, zoom_factor=settings.selection_zoom, zoom_point=(-1, -1)):
-    """Zoom the image to specified point by given zooming factor"""
-    if zoom_point != (-1, -1):
-        # Zoom to given point without showing areas outside image frame
-        offset = np.divide((in_img[0].shape[1] / 2 - zoom_point[0], zoom_point[1] - in_img[0].shape[0] / 2),
-                           1 + 1 / (zoom_factor - 1))
-    else:
-        # Zoom to center
-        offset = np.array((0, 0))
-
-    # Apply zoom
-    out_img = scale_image((translate_image(in_img, offset)[0][
-                           round(in_img[0].shape[0] / 2 - in_img[0].shape[0] / zoom_factor / 2):
-                           round(in_img[0].shape[0] / 2 + in_img[0].shape[0] / zoom_factor / 2),
-                           round(in_img[0].shape[1] / 2 - in_img[0].shape[1] / zoom_factor / 2):
-                           round(in_img[0].shape[1] / 2 + in_img[0].shape[1] / zoom_factor / 2)],
-                           in_img[1]), zoom_factor)[0]
-    return out_img
-
-
-def draw_arrow(in_img, coords, arrow_width):
-    """Draw transparent arrow on image"""
-    line_layer = in_img[0].copy()
-    cv.arrowedLine(line_layer, coords[0], coords[1],
-                   (0, 0, main_script.max_val[in_img[1][0][1]] / 2), arrow_width,
-                   tipLength=(25 / (math.dist(coords[0], coords[1]) + 1)))
-    return cv.addWeighted(line_layer, settings.arrow_alpha, in_img[0], 1 - settings.arrow_alpha, 0), in_img[1]
 
 
 def rotate_image(in_img, rot_angle, interpolate=True):
