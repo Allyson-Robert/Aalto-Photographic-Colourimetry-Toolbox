@@ -107,23 +107,23 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
     # Copy the metadata from the original image.
     return Photograph(converted_image_data, img.get_metadata())
 
-def convert_colour_scale(img: Photograph, input_scale: float | int, output_scale: float | int) -> Photograph:
-    assert input_scale in (1.0, 255, 65535), "Input scale must be 1.0, 255, or 65535"
-    assert output_scale in (1.0, 255, 65535), "Output scale must be 1.0, 255, or 65535"
+def convert_colour_depth(img: Photograph, input_depth: float | int, output_depth: float | int) -> Photograph:
+    assert input_depth in (1.0, 8, 16), "Input scale must be 1.0, 8, or 16"
+    assert output_depth in (1.0, 8, 16), "Output scale must be 1.0, 8, or 16"
 
-    if input_scale == output_scale:
+    if input_depth == output_depth:
         return img
 
-    factor = output_scale / input_scale
+    factor = depth_to_max(output_depth) / depth_to_max(input_depth)
     img_content = img.get_image()
 
     scaled = img_content.astype(np.float64) * factor
 
-    if output_scale == 1.0:
+    if output_depth == 1.0:
         converted_image_data = scaled.astype(np.float32)  # match your float convention
-    elif output_scale == 255:
+    elif output_depth == 8:
         converted_image_data = np.clip(np.round(scaled), 0, 255).astype(np.uint8)
-    else:  # 65535
+    else:  # 16
         converted_image_data = np.clip(np.round(scaled), 0, 65535).astype(np.uint16)
 
     return Photograph(converted_image_data, img.get_metadata())
