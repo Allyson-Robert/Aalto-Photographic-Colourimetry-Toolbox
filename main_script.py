@@ -365,19 +365,17 @@ def main():
             start_time = time.perf_counter()
 
             # Get reference gray image
-            gray_img = image_utilities.read_image('calib-gray_' + focus_height + '.' + settings.input_extension,
-                                                  r'Calibration/Calibration Images')
             new_gray_img = image_utilities.new_read_image('calib-gray_' + focus_height + '.' + settings.input_extension,
                                                   r'Calibration/Calibration Images')
 
-            if gray_img is None:
+            if new_gray_img is None:
                 print()
                 utilities.print_color("Warning: Ref. gray not found!", 'warning')
                 print()
             else:
-                if use_margins:
-                    gray_img = image_utilities.get_safe_area(gray_img)  # Crop to safety margins
-                ref_crop = image_manipulation.match_crop(gray_img, 0)  # Prompt for crop
+                # if use_margins:
+                    # gray_img = image_utilities.get_safe_area(gray_img)  # Crop to safety margins
+                ref_crop = image_manipulation.match_crop(new_gray_img, 0)  # Prompt for crop
                 lt_corner = image_utilities.cvt_point(ref_crop[1][0], -1, gray_img[0].shape)  # Upper left corner
 
                 # Rotate and crop as selected
