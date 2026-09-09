@@ -245,7 +245,8 @@ def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (
     import src.ui.events.point_selection as point_selection
     from src.colour_ops.convert_image_colour import convert_image_colour, convert_colour_depth
     from src.image_ops.scale_image import scale_image
-    import src.image_ops.utils as image_ops_utils
+    from src.image_ops.utils.get_scaling_factor_from_window_size import get_scaling_factor_from_window_size
+    from src.ui.show_image import show_image
 
     assert isinstance(img, Photograph), "img must be an instance of Photograph"
 
@@ -255,33 +256,32 @@ def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (
     img = convert_colour_depth(img, input_depth=img.get_bit_depth(), output_depth=8)
 
     if mode == 0:  # Crop first imageB
-        scaling_coefficient = image_ops_utils.get_scaling_coefficient(img, settings.max_window)
+        scaling_coefficient = get_scaling_factor_from_window_size(img)
         img = scale_image(img, scaling_coefficient)
 
-        if ref_points[0] != ((0, 0), (0, 0)):
+        # if ref_points[0] != ((0, 0), (0, 0)):
             # Previous rotation data exists -> Apply
-            img_r = rotate_image(img_c, ref_points[0])
-            ref_rotated = ref_points[0]
-        else:
+            # img_r = rotate_image(img, ref_points[0])
+            # ref_rotated = ref_points[0]
+        # else:
             # No rotation
-            img_r = img_c
-            ref_rotated = 0
+            # img_r = img
+            # ref_rotated = 0
 
         # Select horizontal line
+        callback_state = point_selection.PointSelectionState()
         context = point_selection.PointSelectionCallbackContext(mode=point_selection.PointSelectionMode.HORIZONTAL,
-                                                                image=Photograph(img_r, img.get_metadata()),
-                                                                window_name=settings.prompts['horizontal'])
+                                                                image=img)
 
-        prompt = settings.prompts['horizontal']
         key_pressed = None
         ref_angle = None
 
         # Only accept rotation with none (= no rotation or previous rotation if adjusting) or both selection points
-        while key_pressed is None or any(np.sum(elem) == -2 for elem in image_utilities.selected_points):
-            image_utilities.show_image(prompt, img_r, False)
+        while key_pressed is None or not callback_state.is_complete():
+            show_image(image=img, window_name=context.mode.window_title)
             # cv.setMouseCallback(prompt, image_utilities.image_event, param=[prompt, img_r])
-            callback_callable = point_selection.PointSelectionCallback(context=context)
-            cv.setMouseCallback(windowName=prompt, onMouse=callback_callable)
+            callback_callable = point_selection.PointSelectionCallback(state=callback_state)
+            cv.setMouseCallback(context.mode.window_title, callback_callable, context)
             key_pressed = image_utilities.wait_key()
             if key_pressed == 'escape':
                 # Skip image
@@ -289,13 +289,12 @@ def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (
             elif key_pressed == 'space':
                 # Use defaults
                 break
-            elif (ref_points[0] != ((0, 0), (0, 0)) and key_pressed == 'enter'
-                  and all(np.sum(elem) == -2 for elem in image_utilities.selected_points)):
+            elif ref_points[0] != ((0, 0), (0, 0)) and key_pressed == 'enter' and not callback_state.is_complete():
                 # Use previous angle data
                 ref_angle = ref_points[0]
                 print(f"Using previous angle: {np.round(ref_angle, 2)} (deg)")
                 break
-        cv.destroyWindow(prompt)
+        cv.destroyWindow(context.mode.window_title)
 
         if key_pressed == 'space':
             # Default to no rotation
