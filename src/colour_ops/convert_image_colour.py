@@ -6,6 +6,7 @@ import src.defaults as defaults
 from src.image.photograph import Photograph
 from src.utils.calc.depth_to_max import depth_to_max
 
+colour.utilities.set_default_float_dtype(np.float32)
 
 def convert_image_colour(img: Photograph, input_space: str, output_space: str) -> Photograph:
     """Convert image data from one supported color space to another.
@@ -44,7 +45,8 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
         case 'BGR':
             # Flip and rescale the BGR values to RGB (0 - 1)
             maximum = depth_to_max(image_depth)
-            rgb_vals = np.interp(np.flip(image_data, -1),(0, maximum), (0, 1))
+            # rgb_vals = np.interp(np.flip(image_data, -1),(0, maximum), (0, 1))
+            rgb_vals = np.flip(image_data, -1).astype(np.float32) / maximum
 
             # Use colour library to convert RGB to XYZ D50
             xyz_vals = colour.RGB_to_XYZ(image_model.cctf_decoding(rgb_vals),
@@ -75,10 +77,10 @@ def convert_image_colour(img: Photograph, input_space: str, output_space: str) -
                 colourspace=defaults.colour_models[defaults.output_color_space],
                 illuminant=colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][defaults.output_illuminant]
             ))
-            converted_image_data = (
-                np.interp(np.flip(rgb_vals, -1), (0, 1), (0, depth_to_max(defaults.output_depth)))
-                .astype(f'uint{defaults.output_depth}')
-            )
+
+            maximum = depth_to_max(defaults.output_depth)
+            scaled = np.clip(np.flip(rgb_vals, -1), 0, 1) * maximum
+            converted_image_data = np.round(scaled).astype(f'uint{defaults.output_depth}')
 
         case 'LAB':
             xyz_vals = colour.chromatic_adaptation(
@@ -117,7 +119,7 @@ def convert_colour_depth(img: Photograph, input_depth: float | int, output_depth
     factor = depth_to_max(output_depth) / depth_to_max(input_depth)
     img_content = img.get_image()
 
-    scaled = img_content.astype(np.float64) * factor
+    scaled = img_content.astype(np.float32) * factor
 
     if output_depth == 1.0:
         converted_image_data = scaled.astype(np.float32)  # match your float convention
