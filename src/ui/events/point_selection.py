@@ -137,6 +137,12 @@ class PointSelectionState:
         self.previous = None
         self.preview_point = None
 
+    def sort(self):
+        """ Sorts the two selected points from left to right, assuming the top left is (0, 0) """
+        if self.is_complete():
+            if self.current[0] > self.previous[0]:
+                self.current, self.previous = self.previous, self.current
+
     def offer_point(self, point: Point) -> None:
         """Insert `point` into the selection, replacing whichever existing
         point is closer to it if both are already assigned.
