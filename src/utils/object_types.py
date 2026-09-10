@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import TypeAlias, Optional
 
-Point: tuple[int, int]
-OptionalPoint: Optional[Point]
+Point: TypeAlias = tuple[int, int]
+OptionalPoint: TypeAlias = Optional[Point]
