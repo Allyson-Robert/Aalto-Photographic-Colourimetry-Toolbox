@@ -9,7 +9,7 @@ KEY_CODES = {
 
 KEY_ACTIONS = {
     'enter': 'validate', # The enter key should trigger the validation of an operation/data entry
-    'escape': 'cancel', # Escape is to cancel operations
+    'escape': 'abort', # Escape is to cancel operations
     'space': 'default', # Spacebar is to set default values
     # 'a': 'special' # The 'a' key is used for a special function, such as applying a setting to all items in a batch
 }
