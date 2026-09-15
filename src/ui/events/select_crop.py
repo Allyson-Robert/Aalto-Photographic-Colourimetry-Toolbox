@@ -5,7 +5,7 @@ import src.ui.events.point_selection as pt_selection
 import cv2 as cv
 
 from ui.events.keypress import wait_for_valid_keypress
-
+from utils.calc.get_corners_from_points import  get_corners_from_points
 
 def select_crop(image: Photograph):
     """ Request user to select a crop region from the given image. The user is prompted to select a rectangular region
@@ -29,8 +29,7 @@ def select_crop(image: Photograph):
 
     match keypress_action:
         case 'confirm':
-            callback_state.sort()
-            return callback_state.get_points()
+            return get_corners_from_points(*callback_state.get_points())
         case _:
             return None
 
