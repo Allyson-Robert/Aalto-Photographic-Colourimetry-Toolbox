@@ -14,7 +14,7 @@ KEY_ACTIONS = {
     # 'a': 'special' # The 'a' key is used for a special function, such as applying a setting to all items in a batch
 }
 
-def wait_for_keypress():
+def wait_for_valid_keypress():
     """ Wait for a keypress and return the corresponding action based on the key pressed """
     while True:
         k = cv.waitKey(0)
