@@ -141,6 +141,12 @@ class PointSelectionState:
             if self.current[0] > self.previous[0]:
                 self.current, self.previous = self.previous, self.current
 
+    def get_points(self) -> tuple[Point, Point]:
+        """Return the two selected points as a tuple, or raise an error if selection is incomplete. """
+        if not self.is_complete():
+            raise RuntimeError("Cannot get points: selection is incomplete.")
+        return self.current, self.previous
+
     def offer_point(self, point: Point) -> None:
         """Insert `point` into the selection, replacing whichever existing
         point is closer to it if both are already assigned.
