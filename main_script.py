@@ -14,6 +14,7 @@ from matplotlib import pyplot as plt
 import colour_checker_detection   # Identifying the colorchecker
 import copy
 
+from image.transformations import transformation_state
 from image.transformations.transformation_state import TransformationState
 # New imports
 from src.image.photograph import Photograph
@@ -381,14 +382,18 @@ def main():
                 # if use_margins:
                     # gray_img = image_utilities.get_safe_area(gray_img)  # Crop to safety margins
                 # ref_crop = image_manipulation.match_crop(gray_img, 0)  # Prompt for crop
-                ref_crop = image_manipulation.match_crop(gray_img, transformation_state=TransformationState(), mode=0)  # Prompt for cropcrop
-                lt_corner = image_utilities.cvt_point(ref_crop[1][0], -1, gray_img[0].shape)  # Upper left corner
+                transformation_state = TransformationState()
+                if not image_manipulation.match_crop(gray_img, transformation_state=transformation_state, mode=0):  # Prompt for cropcrop
+                    raise RuntimeError("Match Crop failed on first run")
+
+                lt_corner = image_utilities.cvt_point(transformation_state.get_crop_points().top_left, -1, gray_img.get_image().shape)  # Upper left cornerner
 
                 # Rotate and crop as selected
-                gray_img = image_utilities.get_roi(image_manipulation.rotate_image(gray_img, ref_crop[0]), 1,
+                pass
+                gray_img = image_utilities.get_roi(image_manipulation.rotate_image(gray_img, transformation_state.get_rotation_angle()), 1,
                                                    in_roi=(lt_corner[0], lt_corner[1],
-                                                           abs(ref_crop[1][1][0] - ref_crop[1][0][0]),
-                                                           abs(ref_crop[1][1][1] - ref_crop[1][0][1])))[0]
+                                                           abs(transformation_state.get_crop_points().bottom_right[0] - transformation_state.get_crop_points().top_left[0]),
+                                                           abs(transformation_state.get_crop_points().bottom_right[1] - transformation_state.get_crop_points().top_left[1])))[0]
 
             calib_image_data = image_utilities.read_image(calib_files[0], r'Calibration/Calibration Images')[1]
             target_template = image_utilities.read_image(ref_name + '.jpg', 'Reference Values', absolute_path=True)
