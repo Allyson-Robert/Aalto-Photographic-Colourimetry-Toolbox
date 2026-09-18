@@ -354,9 +354,9 @@ def match_crop(img: Photograph, transformation_state: TransformationState, mode=
 def crop_target(in_img, template):
     """Crop calibration target using reference points"""
 
-    ref_points = match_crop(in_img, 1, force_prompt=settings.prompts['ref'] + ' ', close_window=False)
+    ref_points = match_crop(in_img, mode=1, force_prompt=settings.prompts['ref'] + ' ', close_window=False)
 
-    template_ref_points = match_crop(template, 1)
+    template_ref_points = match_crop(template, mode=1)
 
     cv.destroyAllWindows()  # Close both windows
 
