@@ -1,5 +1,5 @@
-from image.photograph import Photograph
 from src.image.photograph import Photograph
+import numpy as np
 import cv2 as cv
 
 from general_utils.calc.get_angle_from_points import get_angle_from_points
