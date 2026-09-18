@@ -1,5 +1,10 @@
+from image.photograph import Photograph
 from src.image.photograph import Photograph
 import cv2 as cv
+
+from utils.calc.get_angle_from_points import get_angle_from_points
+from utils.object_types import Point
+
 
 def rotate_image(img: Photograph, angle, interpolate=True):
     """ Return a rotated copy of the given image. Rotation is performed around the center of the image. The angle is
@@ -24,3 +29,11 @@ def rotate_image(img: Photograph, angle, interpolate=True):
     rotated_image = cv.warpAffine(image_pixels, rot_mat, image_pixels.shape[1::-1], flags=interpolation)
 
     return Photograph(rotated_image, img.get_metadata())
+
+
+def apply_tilt(image: Photograph, left: Point, right: Point) -> Photograph:
+    """ Takes an image and a left-to-right sorted pair of points and returns a new image that is rotated to align the
+    line defined by those points horizontally. """
+
+    angle = get_angle_from_points(left, right)
+    return rotate_image(image, angle)
