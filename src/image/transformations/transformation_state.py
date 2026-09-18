@@ -60,17 +60,17 @@ class TransformationState:
 
     # -- crop_top_left ---------------------------------------------------
 
-    def get_crop(self) -> CropPoints:
+    def get_crop_points(self) -> CropPoints:
         if self.crop is None:
             raise ValueError("crop is not set")
         return self.crop
 
-    def set_crop(self, value: CropPoints) -> None:
+    def set_crop_points(self, value: CropPoints) -> None:
         if self.crop is not None:
             raise ValueError("crop is already set")
         self.crop = value
 
-    def reset_crop(self, value: CropPoints) -> None:
+    def reset_crop_points(self, value: CropPoints) -> None:
         self.crop = value
 
     # -- translation_offset -----------------------------------------------
