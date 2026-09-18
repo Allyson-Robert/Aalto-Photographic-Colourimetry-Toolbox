@@ -11,16 +11,14 @@ sense with no window open, so it lives in ``ui``, not ``image``.
 import math
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional
 
 from src.image.photograph import Photograph
 from src.defaults import selection_zoom
 from src.ui import draw
 from src.ui.show_image import show_image
-from src.image_ops.zoom_image import zoom_image
+from image.transformations import zoom_image
 
-Point = tuple[int, int]
-OptionalPoint = Optional[Point]
+from src.general_utils.object_types import Point, OptionalPoint
 
 MOUSEWHEEL_UP_FLAG = 7864320
 MOUSEWHEEL_DOWN_FLAG = -7864320
@@ -136,6 +134,18 @@ class PointSelectionState:
         self.current = None
         self.previous = None
         self.preview_point = None
+
+    def sort(self):
+        """ Sorts the two selected points from left to right, assuming the top left is (0, 0) """
+        if self.is_complete():
+            if self.current[0] > self.previous[0]:
+                self.current, self.previous = self.previous, self.current
+
+    def get_points(self) -> tuple[Point, Point]:
+        """Return the two selected points as a tuple, or raise an error if selection is incomplete. """
+        if not self.is_complete():
+            raise RuntimeError("Cannot get points: selection is incomplete.")
+        return self.current, self.previous
 
     def offer_point(self, point: Point) -> None:
         """Insert `point` into the selection, replacing whichever existing

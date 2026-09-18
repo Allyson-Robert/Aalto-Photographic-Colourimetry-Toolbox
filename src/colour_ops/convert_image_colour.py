@@ -4,7 +4,7 @@ import numpy as np
 import colour
 import src.defaults as defaults
 from src.image.photograph import Photograph
-from src.utils.calc.depth_to_max import depth_to_max
+from src.general_utils.calc.depth_to_max import depth_to_max
 
 colour.utilities.set_default_float_dtype(np.float32)
 

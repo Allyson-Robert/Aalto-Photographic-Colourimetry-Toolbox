@@ -5,6 +5,7 @@ import numpy as np
 
 
 class ReferenceChart(ImageBase):
+    # TODO: Worth considering if this needs to sit here or if it should be in a separate module, since there are fundamental incompatibilities with Photograph
     """ Container for reference chart pixel data and associated metadata.
 
         Reference chart pixels are stored in XML files, which contain the color target format, illuminant, grid information and sample Lab values.

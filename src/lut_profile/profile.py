@@ -1,20 +1,20 @@
 import os
 import ast
 import colour
-from src.profile.utils.parse_cube_comments import parse_cube_comments
-from src.profile.utils.format_cube_comments import format_cube_comments
+from src.lut_profile.utils.parse_cube_comments import parse_cube_comments
+from src.lut_profile.utils.format_cube_comments import format_cube_comments
 
 class LUTProfile:
-    """ Container for LUT profile data.
+    """ Container for LUT lut_profile data.
 
-     Class reads and writes a 3D LUT profile from a .cube file and extracts relevant information such as the LUT content, calibration gray values, color space, bit depth, EXIF metadata, statistics, and sample data.
+     Class reads and writes a 3D LUT lut_profile from a .cube file and extracts relevant information such as the LUT content, calibration gray values, color space, bit depth, EXIF metadata, statistics, and sample data.
 
      Attributes:
         lut_data (colour.LUT3D): The 3D LUT data read from the .cube file.
         gray (tuple): The reference gray values in Lab color space.
-        colour_space (str): The color space of the LUT profile.
-        bit_depth (int): The bit depth of the LUT profile.
-        exif_metadata (ExifMetaData): The EXIF metadata associated with the LUT profile.
+        colour_space (str): The color space of the LUT lut_profile.
+        bit_depth (int): The bit depth of the LUT lut_profile.
+        exif_metadata (ExifMetaData): The EXIF metadata associated with the LUT lut_profile.
         statistics (dict): Statistics related to the calibration, such as average and maximum CIEDE2000 values.
         sample_data (dict): Color coordinates of the sample data used for calibration.
      """
@@ -31,7 +31,7 @@ class LUTProfile:
 
     @classmethod
     def from_file_location(cls, profile_location) -> "LUTProfile":
-        """Read calibration profile from a file on disk and extract data such as LUT content
+        """Read calibration lut_profile from a file on disk and extract data such as LUT content
         and calibration conditions."""
         # Read 3D LUT and comments
         lut = colour.read_LUT(profile_location)
@@ -55,7 +55,7 @@ class LUTProfile:
         return self.gray
 
     def write_profile(self, save_location):
-        """Write correction profile 3D LUT"""
+        """Write correction lut_profile 3D LUT"""
 
         # Verify filename extension, add .cube or replace if needed
         if not save_location.lower().endswith('.cube'):

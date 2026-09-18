@@ -4,7 +4,7 @@ from src.image.photograph import ExifMetaData
 
 def parse_cube_comments(comments: list[str]):
     """ Obtain calibration gray values, colour space, bit depth, exit metadata, statistics and sample data from .cube comments. """
-    # Read profile reference gray LAB
+    # Read lut_profile reference gray LAB
     gray = ast.literal_eval(comments[1].split(';')[1])
 
     # Third line contains colour space, bit depth and EXIF metadata

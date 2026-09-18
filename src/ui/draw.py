@@ -7,7 +7,7 @@ import math
 
 from src.image.photograph import Photograph
 from src.defaults import arrow_alpha
-from src.utils.calc.depth_to_max import depth_to_max
+from src.general_utils.calc.depth_to_max import depth_to_max
 import cv2 as cv
 
 def draw_arrow(image: Photograph, start_point: tuple[int, int], end_point: tuple[int, int], width: int, preview: bool = False) -> Photograph:

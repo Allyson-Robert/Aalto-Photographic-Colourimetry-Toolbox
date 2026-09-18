@@ -22,7 +22,7 @@ output_color_space = 'PROPHOTO' # 'SRGB', 'ADOBE', 'PROPHOTO' (recommended)
 output_depth = 16               # 8 or 16 (recommended) bit
 output_extension = 'tif'        # Output file extension
 
-uniformity_scale = 0.03         # Uniformity image_ops resolution
+uniformity_scale = 0.03         # Uniformity transformations resolution
 ciede_max = 2.55                # CIEDE2000 value interpolated to max brightness
 
 # Range of input LAB, max. range: (0, -100, -100), (100, 100, 100), natural colors usually (0, -40, -50), (100, 50, 60)

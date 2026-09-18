@@ -2,8 +2,8 @@
 
 import cv2 as cv
 import src.defaults as defaults
-from src.image_ops.utils.read_metadata_from_image import read_metadata_from_image
-from src.image_ops.utils.parse_bitdepth_from_exif_metadata import parse_bitdepth_from_exif_metadata
+from image.transformations.utils.read_metadata_from_image import read_metadata_from_image
+from image.transformations.utils.parse_bitdepth_from_exif_metadata import parse_bitdepth_from_exif_metadata
 from src.image.image_base import ImageBase
 
 class Photograph(ImageBase):
