@@ -25,7 +25,7 @@ class TransformationState:
 
     image_scale: float | None = None
     rotation_angle: float | None = None
-    crop: CropPoints | None = None
+    crop_points: CropPoints | None = None
     translation_offset: Point | None = None
 
     # -- image_scale ---------------------------------------------------
@@ -61,17 +61,17 @@ class TransformationState:
     # -- crop_top_left ---------------------------------------------------
 
     def get_crop_points(self) -> CropPoints:
-        if self.crop is None:
-            raise ValueError("crop is not set")
-        return self.crop
+        if self.crop_points is None:
+            raise ValueError("Crop points are not set")
+        return self.crop_points
 
     def set_crop_points(self, value: CropPoints) -> None:
-        if self.crop is not None:
-            raise ValueError("crop is already set")
-        self.crop = value
+        if self.crop_points is not None:
+            raise ValueError("Crop points are already set")
+        self.crop_points = value
 
     def reset_crop_points(self, value: CropPoints) -> None:
-        self.crop = value
+        self.crop_points = value
 
     # -- translation_offset -----------------------------------------------
 
