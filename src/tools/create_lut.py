@@ -1,1 +1,1 @@
-""" This is where the calibration workflow will live """
+""" This is where the calibration workflow for lut creation will live """
