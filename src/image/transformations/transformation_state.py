@@ -25,8 +25,7 @@ class TransformationState:
 
     image_scale: float | None = None
     rotation_angle: float | None = None
-    crop_top_left: Point | None = None
-    crop_bottom_right: Point | None = None
+    crop: tuple[Point, Point] | None = None
     translation_offset: Point | None = None
 
     # -- image_scale ---------------------------------------------------
@@ -61,33 +60,18 @@ class TransformationState:
 
     # -- crop_top_left ---------------------------------------------------
 
-    def get_crop_top_left(self) -> Point:
-        if self.crop_top_left is None:
-            raise ValueError("crop_top_left is not set")
-        return self.crop_top_left
+    def get_crop(self) -> tuple[Point, Point]:
+        if self.crop is None:
+            raise ValueError("crop is not set")
+        return self.crop
 
-    def set_crop_top_left(self, value: Point) -> None:
-        if self.crop_top_left is not None:
-            raise ValueError("crop_top_left is already set")
-        self.crop_top_left = value
+    def set_crop(self, value: tuple[Point, Point]) -> None:
+        if self.crop is not None:
+            raise ValueError("crop is already set")
+        self.crop = value
 
-    def reset_crop_top_left(self, value: Point) -> None:
-        self.crop_top_left = value
-
-    # -- crop_bottom_right -------------------------------------------------
-
-    def get_crop_bottom_right(self) -> Point:
-        if self.crop_bottom_right is None:
-            raise ValueError("crop_bottom_right is not set")
-        return self.crop_bottom_right
-
-    def set_crop_bottom_right(self, value: Point) -> None:
-        if self.crop_bottom_right is not None:
-            raise ValueError("crop_bottom_right is already set")
-        self.crop_bottom_right = value
-
-    def reset_crop_bottom_right(self, value: Point) -> None:
-        self.crop_bottom_right = value
+    def reset_crop(self, value: tuple[Point, Point]) -> None:
+        self.crop = value
 
     # -- translation_offset -----------------------------------------------
 
