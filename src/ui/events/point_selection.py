@@ -16,7 +16,7 @@ from src.image.photograph import Photograph
 from src.defaults import selection_zoom
 from src.ui import draw
 from src.ui.show_image import show_image
-from src.image_ops.zoom_image import zoom_image
+from src.image_transformations.zoom_image import zoom_image
 
 from src.utils.object_types import Point, OptionalPoint
 
