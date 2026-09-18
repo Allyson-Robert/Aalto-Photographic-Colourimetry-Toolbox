@@ -238,15 +238,20 @@ def crop_samples(sample_name, adjust=False, ref_gray=False, crop_settings=None):
 
 
 from src.image.photograph import Photograph
-def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), convert=True, first=False,
+from src.image.transformations.transformation_state import TransformationState
+
+def match_crop(img: Photograph, transformation_state: TransformationState, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (0, 0))), convert=True, first=False,
                force_prompt=None, close_window=True):
     """Mode 0: Crop first image, 1: Match crop"""
 
-    import src.ui.events.point_selection as point_selection
     from src.colour_ops.convert_image_colour import convert_image_colour, convert_colour_depth
-    from src.image_ops.scale_image import scale_image
-    from src.image_ops.utils.get_scaling_factor_from_window_size import get_scaling_factor_from_window_size
-    from src.ui.show_image import show_image
+    from src.image.transformations.utils.get_scaling_factor_from_window_size import get_scaling_factor_from_window_size
+
+    from src.image.transformations.scale_image import scale_image
+    from src.image.transformations.rotate_image import rotate_image
+    from src.image.transformations.crop_image import crop_image
+    from src.ui.events.select_tilt import select_tilt
+    from src.ui.events.select_crop import select_crop
 
     assert isinstance(img, Photograph), "img must be an instance of Photograph"
 
@@ -256,8 +261,8 @@ def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (
     img = convert_colour_depth(img, input_depth=img.get_bit_depth(), output_depth=8)
 
     if mode == 0:  # Crop first imageB
-        scaling_coefficient = get_scaling_factor_from_window_size(img)
-        img = scale_image(img, scaling_coefficient)
+        transformation_state.set_image_scale(get_scaling_factor_from_window_size(img))
+        img = scale_image(img, transformation_state.get_image_scale())
 
         # if ref_points[0] != ((0, 0), (0, 0)):
             # Previous rotation data exists -> Apply
@@ -268,97 +273,17 @@ def match_crop(img: Photograph, mode=1, ref_points=(((0, 0), (0, 0)), ((0, 0), (
             # img_r = img
             # ref_rotated = 0
 
-        # Select horizontal line
-        callback_state = point_selection.PointSelectionState()
-        context = point_selection.PointSelectionCallbackContext(mode=point_selection.PointSelectionMode.HORIZONTAL,
-                                                                image=img)
+        # Tilt-shift the image
+        selected_tilt = select_tilt(img)
+        transformation_state.set_rotation_angle(selected_tilt)
+        img = rotate_image(img, transformation_state.get_rotation_angle())
 
-        key_pressed = None
-        ref_angle = None
+        # Crop the (rotated) image
+        cropping_corners = select_crop(img)
+        transformation_state.set_crop(cropping_corners)
+        img = crop_image(img, *transformation_state.get_crop())
 
-        # Only accept rotation with none (= no rotation or previous rotation if adjusting) or both selection points
-        while key_pressed is None or not callback_state.is_complete():
-            show_image(image=img, window_name=context.mode.window_title)
-            # cv.setMouseCallback(prompt, image_utilities.image_event, param=[prompt, img_r])
-            callback_callable = point_selection.PointSelectionCallback(state=callback_state)
-            cv.setMouseCallback(context.mode.window_title, callback_callable, context)
-            key_pressed = image_utilities.wait_key()
-            if key_pressed == 'escape':
-                # Skip image
-                return None
-            elif key_pressed == 'space':
-                # Use defaults
-                break
-            elif ref_points[0] != ((0, 0), (0, 0)) and key_pressed == 'enter' and not callback_state.is_complete():
-                # Use previous angle data
-                ref_angle = ref_points[0]
-                print(f"Using previous angle: {np.round(ref_angle, 2)} (deg)")
-                break
-        cv.destroyWindow(context.mode.window_title)
-
-        if key_pressed == 'space':
-            # Default to no rotation
-            print("Setting default rotation: 0 (deg).")
-            ref_angle = 0
-        else:
-            if ref_angle is None:
-                # Order selected points starting from left
-                if image_utilities.selected_points[0][0] > image_utilities.selected_points[1][0]:
-                    image_utilities.selected_points = (image_utilities.selected_points[1],
-                                                       image_utilities.selected_points[0])
-
-                ref_angle = utilities.get_angle(image_utilities.selected_points[0],
-                                                image_utilities.selected_points[1]) + ref_rotated
-
-            img_c = rotate_image(img_c, ref_angle)  # Apply final rotation
-
-        image_utilities.selected_points = ((-1, -1), (-1, -1))  # Clear selection
-
-        if ref_points[1] != ((0, 0), (0, 0)):
-            # Get existing crop data
-            roi = image_utilities.cvt_point(ref_points[1][0], -1, in_img[0].shape)
-            roi = (roi[0] * img_scale, roi[1] * img_scale,
-                   abs(ref_points[1][1][0] - ref_points[1][0][0]) * img_scale,
-                   abs(ref_points[1][1][1] - ref_points[1][0][1]) * img_scale)
-
-            # Show previous crop rectangle, select crop
-            try:
-                roi, key_pressed = image_utilities.get_roi(img_c, in_roi=roi, show_format=True)[1:3]
-            except TypeError:
-                key_pressed = 'escape'
-        else:
-            roi, key_pressed = image_utilities.get_roi(img_c, show_format=True)[1:3]  # Select crop
-
-        cv.destroyAllWindows()
-        if key_pressed == 'escape':
-            # Skip image
-            return None
-
-        if roi is not None:
-            # Calculate crop corners
-            ref_corners = np.divide((roi[0] - img_c[0].shape[1] / 2,
-                                     img_c[0].shape[0] / 2 - roi[1],
-                                     (roi[0] + roi[2]) - img_c[0].shape[1] / 2,
-                                     img_c[0].shape[0] / 2 - (roi[1] + roi[3])), img_scale)
-        else:
-            if key_pressed != 'space' and ref_points[1] != ((0, 0), (0, 0)):
-                # Use previous crop
-                print("Using previous crop.")
-                ref_corners = (ref_points[1][0][0], ref_points[1][0][1],
-                               ref_points[1][1][0], ref_points[1][1][1])
-            else:
-                # Default crop to image corners (= no crop)
-                print("Setting default crop: no crop.")
-                ref_corners = np.divide((-img_c[0].shape[1] / 2,
-                                         img_c[0].shape[0] / 2,
-                                         img_c[0].shape[1] / 2,
-                                         -img_c[0].shape[0] / 2), img_scale)
-
-        # Round corner values
-        ref_corners = ((round(ref_corners[0]), round(ref_corners[1])),
-                       (round(ref_corners[2]), round(ref_corners[3])))
-
-        return ref_angle, ref_corners
+        return transformation_state
 
     elif mode == 1:  # Match crop
         img_c, img_scale = scale_image(in_img)  # Scale to max window size

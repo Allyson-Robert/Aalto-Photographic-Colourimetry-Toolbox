@@ -14,6 +14,7 @@ from matplotlib import pyplot as plt
 import colour_checker_detection   # Identifying the colorchecker
 import copy
 
+from image.transformations.transformation_state import TransformationState
 # New imports
 from src.image.photograph import Photograph
 from src.colour_ops.convert_image_colour import convert_image_colour, convert_colour_depth
@@ -380,7 +381,7 @@ def main():
                 # if use_margins:
                     # gray_img = image_utilities.get_safe_area(gray_img)  # Crop to safety margins
                 # ref_crop = image_manipulation.match_crop(gray_img, 0)  # Prompt for crop
-                ref_crop = image_manipulation.match_crop(gray_img, 0)  # Prompt for crop
+                ref_crop = image_manipulation.match_crop(gray_img, transformation_state=TransformationState(), mode=0)  # Prompt for cropcrop
                 lt_corner = image_utilities.cvt_point(ref_crop[1][0], -1, gray_img[0].shape)  # Upper left corner
 
                 # Rotate and crop as selected
