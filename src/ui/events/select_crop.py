@@ -9,9 +9,8 @@ def select_crop(image: Photograph) -> CropPoints:
     of interest (ROI) using the mouse. The selected ROI is returned as a tuple of two points: the top-left and
     bottom-right corners of the rectangle."""
 
-    converted_image = convert_image_colour(image)
-
-    callback_state, keypress_action = run_point_selection(converted_image, pt_selection.PointSelectionMode.CROP)
+    # TODO: currently not verifying that the colour space is appropriate for point selection. Should add a check to ensure that the image is in a suitable colour space for point selection.
+    callback_state, keypress_action = run_point_selection(image, pt_selection.PointSelectionMode.CROP)
 
     match keypress_action:
         case 'confirm':

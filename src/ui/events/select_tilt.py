@@ -8,9 +8,8 @@ def select_tilt(image: Photograph):
     """ Request user to select a tilt line to rotate the given image. The user is prompted to select two points using
     the mouse. The selected points are returned as a tuple of two points: the first and second points of the line."""
 
-    converted_image = convert_image_colour(image)
-
-    callback_state, keypress_action = run_point_selection(converted_image, pt_selection.PointSelectionMode.HORIZONTAL)
+    # TODO: currently not verifying that the colour space is appropriate for point selection. Should add a check to ensure that the image is in a suitable colour space for point selection.
+    callback_state, keypress_action = run_point_selection(image, pt_selection.PointSelectionMode.HORIZONTAL)
 
     match keypress_action:
         case 'confirm':
