@@ -1,7 +1,8 @@
+from general_utils.object_types import Point
 from src.image.photograph import Photograph
 import cv2 as cv
 
-def translate_image(image: Photograph, offset: tuple[float, float]):
+def translate_image(image: Photograph, offset: Point):
     """
         Returns a translated copy of the input Photograph
     """
