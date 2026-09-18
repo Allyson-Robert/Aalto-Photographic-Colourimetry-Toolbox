@@ -13,8 +13,8 @@ such dependency, which is part of why they were chosen as the stored representat
 
 from dataclasses import dataclass
 
-from src.utils.object_types import Point
-from src.utils.calc.point_representation import (
+from src.general_utils.object_types import Point
+from src.general_utils.calc.point_representation import (
     corner_to_relative,
     polar_to_relative,
     relative_to_corner,

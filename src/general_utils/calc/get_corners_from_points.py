@@ -1,4 +1,4 @@
-from utils.object_types import Point
+from general_utils.object_types import Point
 
 def get_corners_from_points(point_a: Point, point_b: Point) -> tuple[Point, Point]:
     """Given two non-collinear points, return (top_left, bottom_right) of the rectangle they define."""

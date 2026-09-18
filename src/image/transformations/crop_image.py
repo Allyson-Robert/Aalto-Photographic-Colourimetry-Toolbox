@@ -1,4 +1,4 @@
-from src.utils.object_types import Point
+from src.general_utils.object_types import Point
 from src.image.photograph import Photograph
 
 def apply_crop(image: Photograph, topleft: Point, bottomright: Point) -> Photograph:

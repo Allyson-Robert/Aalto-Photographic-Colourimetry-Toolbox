@@ -1,7 +1,7 @@
 from src.image.photograph import Photograph
 from src.colour_ops.convert_image_colour import convert_image_colour
 import src.ui.events.point_selection as pt_selection
-from utils.calc.get_corners_from_points import  get_corners_from_points
+from general_utils.calc.get_corners_from_points import  get_corners_from_points
 from ui.events.run_point_selection import run_point_selection
 
 def select_crop(image: Photograph):

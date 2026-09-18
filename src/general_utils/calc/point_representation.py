@@ -17,8 +17,8 @@ These representations are defined as follows:
 """
 
 import math
-from src.utils.object_types import Point
-from src.utils.calc.get_angle_from_points import get_angle_from_points
+from src.general_utils.object_types import Point
+from src.general_utils.calc.get_angle_from_points import get_angle_from_points
 
 def polar_to_relative(radius: float, degrees: float) -> tuple[float, float]:
     """Convert polar coordinates to relative (image-center-origin, Y-up) coordinates."""

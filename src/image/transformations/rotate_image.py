@@ -2,8 +2,8 @@ from image.photograph import Photograph
 from src.image.photograph import Photograph
 import cv2 as cv
 
-from utils.calc.get_angle_from_points import get_angle_from_points
-from utils.object_types import Point
+from general_utils.calc.get_angle_from_points import get_angle_from_points
+from general_utils.object_types import Point
 
 
 def rotate_image(img: Photograph, angle, interpolate=True):

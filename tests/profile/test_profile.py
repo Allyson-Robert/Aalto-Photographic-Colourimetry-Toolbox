@@ -1,11 +1,11 @@
 from unittest import TestCase
-from src.profile.profile import LUTProfile
+from src.lut_profile.profile import LUTProfile
 
 TESTFILE_LOCATION = r"/u/56/roberta2/unix/Documents/Colour2Foil/Aalto-Photographic-Colourimetry-Toolbox/testdata/540.cube"
 
 class TestLUTProfile(TestCase):
     def test_from_file_location(self):
-        # Test with a valid profile location
+        # Test with a valid lut_profile location
         profile_location = TESTFILE_LOCATION
         lut_profile = LUTProfile.from_file_location(profile_location)
         self.assertIsInstance(lut_profile, LUTProfile)
@@ -13,8 +13,8 @@ class TestLUTProfile(TestCase):
         self.assertIsNotNone(lut_profile.get_gray())
 
     def test_from_file_location_invalid(self):
-        # Test with an invalid profile location
-        invalid_profile_location = r"/invalid/path/to/profile.cube"
+        # Test with an invalid lut_profile location
+        invalid_profile_location = r"/invalid/path/to/lut_profile.cube"
         with self.assertRaises(FileNotFoundError):
             LUTProfile.from_file_location(invalid_profile_location)
 
@@ -38,4 +38,4 @@ class TestLUTProfile(TestCase):
         written_profile = LUTProfile.from_file_location(test_location)
         self.assertIsNotNone(written_profile.get_lut())
         self.assertIsNotNone(written_profile.get_gray())
-        assert written_profile.get_gray() == lut_profile.get_gray(), "Gray values do not match after writing and reading the profile."
+        assert written_profile.get_gray() == lut_profile.get_gray(), "Gray values do not match after writing and reading the lut_profile."

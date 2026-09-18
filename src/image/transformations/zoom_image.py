@@ -1,8 +1,8 @@
 import numpy as np
 
 from src.image.photograph import Photograph
-from src.image_transformations.scale_image import scale_image
-from src.image_transformations.translate_image import translate_image
+from image.transformations.scale_image import scale_image
+from image.transformations.translate_image import translate_image
 
 def zoom_image(image: Photograph, zoom_coord: tuple | None, zoom_factor: float):
     # Compute offset to center zoom around the specified coordinate. If no coordinate is provided, zoom to the center of the image.
