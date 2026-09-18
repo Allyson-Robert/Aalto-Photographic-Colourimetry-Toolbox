@@ -11,7 +11,7 @@ particular consumer needs.
 
 from dataclasses import dataclass
 
-from general_utils.object_types import Point
+from general_utils.object_types import Point, CropPoints
 
 
 @dataclass
@@ -25,7 +25,7 @@ class TransformationState:
 
     image_scale: float | None = None
     rotation_angle: float | None = None
-    crop: tuple[Point, Point] | None = None
+    crop: CropPoints | None = None
     translation_offset: Point | None = None
 
     # -- image_scale ---------------------------------------------------
@@ -60,17 +60,17 @@ class TransformationState:
 
     # -- crop_top_left ---------------------------------------------------
 
-    def get_crop(self) -> tuple[Point, Point]:
+    def get_crop(self) -> CropPoints:
         if self.crop is None:
             raise ValueError("crop is not set")
         return self.crop
 
-    def set_crop(self, value: tuple[Point, Point]) -> None:
+    def set_crop(self, value: CropPoints) -> None:
         if self.crop is not None:
             raise ValueError("crop is already set")
         self.crop = value
 
-    def reset_crop(self, value: tuple[Point, Point]) -> None:
+    def reset_crop(self, value: CropPoints) -> None:
         self.crop = value
 
     # -- translation_offset -----------------------------------------------
