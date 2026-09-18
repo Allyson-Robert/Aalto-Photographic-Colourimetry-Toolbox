@@ -280,10 +280,10 @@ def match_crop(img: Photograph, transformation_state: TransformationState, mode=
 
         # Crop the (rotated) image
         cropping_corners = select_crop(img)
-        transformation_state.set_crop(cropping_corners)
-        img = crop_image(img, *transformation_state.get_crop())
+        transformation_state.set_crop_points(cropping_corners)
+        crop_image(img, transformation_state.get_crop_points())
 
-        return transformation_state
+        return True
 
     elif mode == 1:  # Match crop
         img_c, img_scale = scale_image(in_img)  # Scale to max window size
